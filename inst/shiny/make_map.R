@@ -62,7 +62,19 @@ make_map  = function(comid){
   
   # data <- HydroData::findNLDI(comid = comid, nav = c("UM", "DM"),
   #                             find = "basin", distance_km = .005)
-  data = find_nhd(comid)
+  
+  click <- input$map_click %>% 
+    data.frame() %>% 
+    dplyr::select(lat,lng)
+  pt <- data.frame(lng = lon, lat = lat)
+  pt = sf::st_as_sf(pt, 
+                    coords = c("lng", "lat"), 
+                    crs = '+proj=longlat +datum=WGS84')
+ 
+  nldi = findNLDI(location = pt)
+  nldi$comid
+  data = get_nhdplus(comid = nldi$comid, realization = "catchment")
+  # flow_df <- readNWMdata(comid = nldi$comid)
   
   ms <- data$flowpath %>% 
     sf::st_cast("POINT") %>% 
