@@ -1,0 +1,134 @@
+---
+title: "NWM"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    navbar:
+      - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
+    theme: cerulean
+    orientation: row
+    vertical_layout: fill
+---
+
+```{r setup, include = FALSE}
+library(shiny)
+library(flexdashboard)
+library(leaflet)
+library(sf)
+library(ggplot2)
+library(dplyr)
+library(shinycustomloader)
+library(dataRetrieval)
+library(nhdplusTools)
+library(nwmHistoric)
+library(dygraphs)
+
+source('R/helper.R')
+```
+
+```{r, context="server"}
+#Initialize Maps 
+output$catchMap     <- renderLeaflet({ basemap() })
+output$catchMap_2     <- renderLeaflet({ second_map() })
+comid <- reactiveValues({NULL})
+
+```
+
+
+FEMA {data-icon="fa-tint"}
+=====================================
+
+Inputs {.sidebar}
+-------------------------------------
+
+### Model Filters
+```{r}
+dateRangeInput("dateTS", label = "range", min = "1993-01-01", max = "2018-12-31")
+actionButton("catchButton", label = "date")
+```
+
+Row 
+-----------------------------------------------------------------------
+### 100 Year Flood Plain 
+```{r}
+leafletOutput("catchMap_2")
+```
+
+### bb
+```{r}
+dygraphOutput("catchTS")
+```
+
+Row 
+-----------------------------------------------------------------------
+### Draw
+```{r}
+leafletOutput("catchMap")
+```
+
+```{r context = "server"}
+  observeEvent(input$catchMap_click, {
+    # pt <<- NULL
+    click <<- input$catchMap_click %>% 
+      data.frame() %>% 
+      dplyr::select(lat,lng)
+    
+    print(click)
+    pt <- sf::st_as_sf(click, 
+                        coords = c("lng", "lat"), 
+                        crs = 4326)
+  
+  
+    nldi <- findNLDI(location = pt)
+    
+    comid = nldi$comid
+    
+    print(comid)
+    # output$catchTS <- renderDygraph({ make_ts(pt) })
+
+
+    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    leafletProxy("catchMap") %>% 
+      clearMarkers() %>%
+      clearShapes() %>% 
+      addMarkers(data = pt) %>% 
+      addPolygons( data = catch_df,
+                   col = 'blue')
+    leafletProxy("catchMap_2") %>%
+      clearMarkers() %>%
+      clearShapes() %>%
+      addMarkers(data = pt,
+                 layerId = ~comid) %>%
+      addPolygons( data = catch_df,
+                   col = 'blue')
+  })
+
+  observe({ # Observer to respond to zoom / pan of map1 and apply to map2
+    coords <- input$catchMap_center
+    zoom <- input$catchMap_zoom
+    print(coords)
+    print(zoom)
+    if (!is.null(coords)) {
+      leafletProxy("catchMap_2") %>%
+        setView(lat = coords$lat, lng = coords$lng, zoom = zoom)
+    }
+  })
+```
+
+```{r, context = "server"}
+observeEvent(input$catchButton, {
+  if(is.null(input$comid)){
+    NULL
+  } else {
+    make_ts(comid = input$comid)
+  }
+  
+})
+```
+
+
+
+
+
+
+

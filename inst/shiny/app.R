@@ -31,10 +31,10 @@ source('R/helper.R')
 
 basemap <- basemap()
 second_map <- second_map()
-
+reactiveValues(pt)
 ui <- dashboardPage(
   dashboardHeader(title = "COVID-19 Dashboard"),
-  dashboardSidebar(disable = TRUE),
+  dashboardSidebar(),
   dashboardBody(
     fluidRow(
       column(width = 7,
@@ -44,15 +44,23 @@ ui <- dashboardPage(
       ),
       column(width = 4,
              box(width = NULL, solidHeader = TRUE,
-                 dygraphOutput("catchTS")),
+                 dygraphOutput("catchTS"),
+             # box(title = "Controls",
+             #     dateRangeInput ("date_range", 
+             #         start="2010-01-01",
+             #         end="2015-01-01",
+             #        # start = nwm$dateTime[1],
+             #        # end = tail(nwm$dateTime, n =1),
+             #        label = h3("Date range")))))
              box(width = NULL, solidHeader = TRUE,
-                 leafletOutput("catchMap_2")
+                 leafletOutput("catchMap_2"))
              
       )
     )
-  )
-)
-)
+  )))
+
+
+
 
 # ui <- fluidPage(
 #   
@@ -66,7 +74,6 @@ ui <- dashboardPage(
 #     leafletOutput('catchMap'),
 #     dygraphOutput("catchTS")
 #   )
-# )
 
 server <- function(input, output) {
   
@@ -74,10 +81,10 @@ server <- function(input, output) {
 
   output$catchMap     <- renderLeaflet({ basemap })
   output$catchMap_2     <- renderLeaflet({ second_map })
-  # output$catchTS      <- renderDygraph( {make_ts(pt)} )
+  output$catchTS      <- renderDygraph( {make_ts(pt)} )
 
   output$catchMessage <- renderText(k$txt)
-  
+
   observeEvent(input$catchMap_click, {
     # pt <<- NULL
     click <<- input$catchMap_click %>% 
@@ -105,15 +112,15 @@ server <- function(input, output) {
                  layerId = ~comid) %>% 
       addPolygons( data = catch_df,
                    col = 'blue')
-    leafletProxy("catchMap_2") %>% 
+    leafletProxy("catchMap_2") %>%
       clearMarkers() %>%
-      clearShapes() %>% 
-      addMarkers(data = pt, 
-                 layerId = ~comid) %>% 
+      clearShapes() %>%
+      addMarkers(data = pt,
+                 layerId = ~comid) %>%
       addPolygons( data = catch_df,
                    col = 'blue')
   })
-  
+
   observe({ # Observer to respond to zoom / pan of map1 and apply to map2
     coords <- input$catchMap_center
     zoom <- input$catchMap_zoom
