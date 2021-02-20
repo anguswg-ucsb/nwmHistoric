@@ -30,8 +30,11 @@ source('R/helper.R')
 #Initialize Maps 
 output$catchMap     <- renderLeaflet({ basemap() })
 output$catchMap_2     <- renderLeaflet({ second_map() })
-comid <- reactiveValues({NULL})
 
+
+
+comid <- reactiveValues(comid = NULL)
+ 
 ```
 
 
@@ -45,7 +48,9 @@ Inputs {.sidebar}
 ```{r}
 dateRangeInput("dateTS", label = "range", min = "1993-01-01", max = "2018-12-31")
 actionButton("catchButton", label = "date")
+
 ```
+
 
 Row 
 -----------------------------------------------------------------------
@@ -59,12 +64,40 @@ leafletOutput("catchMap_2")
 dygraphOutput("catchTS")
 ```
 
+```{r, context = "server"}
+  observeEvent(input$catchMap_click, {
+    # pt <<- NULL
+    click <<- input$catchMap_click %>%
+      data.frame() %>%
+      dplyr::select(lat,lng)
+    print(click)
+    pt <- sf::st_as_sf(click,
+                        coords = c("lng", "lat"),
+                        crs = 4326)
+    nldi <- findNLDI(location = pt)
+    #
+    comid <- nldi$comid
+
+    output$catchTS      <- renderDygraph( {make_ts(comid)} )
+})
+
+# observeEvent(input$catchButton, {
+#   if(is.null(comid)){
+#     NULL
+#   } else {
+#     output$catchTS  <-  make_ts(comid = input$comid)
+#   }
+# 
+# })
+```
+
 Row 
 -----------------------------------------------------------------------
 ### Draw
 ```{r}
 leafletOutput("catchMap")
 ```
+
 
 ```{r context = "server"}
   observeEvent(input$catchMap_click, {
@@ -93,6 +126,7 @@ leafletOutput("catchMap")
       clearShapes() %>% 
       addMarkers(data = pt) %>% 
       addPolygons( data = catch_df,
+                   layerId = ~comid,
                    col = 'blue')
     leafletProxy("catchMap_2") %>%
       clearMarkers() %>%
@@ -115,16 +149,7 @@ leafletOutput("catchMap")
   })
 ```
 
-```{r, context = "server"}
-observeEvent(input$catchButton, {
-  if(is.null(input$comid)){
-    NULL
-  } else {
-    make_ts(comid = input$comid)
-  }
-  
-})
-```
+
 
 
 

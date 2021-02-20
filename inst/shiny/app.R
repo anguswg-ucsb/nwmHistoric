@@ -31,7 +31,9 @@ source('R/helper.R')
 
 basemap <- basemap()
 second_map <- second_map()
+
 reactiveValues(pt)
+
 ui <- dashboardPage(
   dashboardHeader(title = "COVID-19 Dashboard"),
   dashboardSidebar(),
@@ -99,12 +101,12 @@ server <- function(input, output) {
   
     nldi <- findNLDI(location = pt)
     
-    pt$comid = nldi$comid
+    comid = nldi$comid
     print(pt$comid)
-    output$catchTS <- renderDygraph({ make_ts(pt) })
+    # output$catchTS <- renderDygraph({ make_ts(pt) })
 
 
-    catch_df <- get_nhdplus(comid = nldi$comid, realization = "catchment")
+    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
     leafletProxy("catchMap") %>% 
       clearMarkers() %>%
       clearShapes() %>% 

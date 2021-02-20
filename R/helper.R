@@ -38,8 +38,8 @@ second_map <- function() {
 
 
 
-make_ts <- function(pt) {
-  nwm <- readNWMdata(comid = pt$comid)
+make_ts <- function(comid) {
+  nwm <- readNWMdata(comid = comid)
   ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   dygraph(ts)  %>% 
   dyHighlight(highlightCircleSize = 2,
