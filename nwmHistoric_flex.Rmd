@@ -13,16 +13,21 @@ output:
 ```{r setup, include = FALSE}
 library(shiny)
 library(flexdashboard)
+library(shinycustomloader)
+
+library(dataRetrieval)
+library(nhdplusTools)
+library(nwmHistoric)
+
+library(lubridate)
+
 library(leaflet)
 library(sf)
 library(ggplot2)
 library(dplyr)
-library(shinycustomloader)
-library(dataRetrieval)
-library(nhdplusTools)
-library(nwmHistoric)
 library(dygraphs)
-library(lubridate)
+library(DT)
+library(formattable)
 
 source('R/helper.R')
 ```

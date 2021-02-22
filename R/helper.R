@@ -1,18 +1,21 @@
 
 
 
+# 
+# library(shiny)
+# library(leaflet)
+# library(sf)
+# library(ggplot2)
+# library(dplyr)
+# library(shinycustomloader)
+# library(shinydashboard)
+# library(dataRetrieval)
+# library(nhdplusTools)
+# library(nwmHistoric)
+# library(dygraphs)
+# library(DT)
+# library(formattable)
 
-library(shiny)
-library(leaflet)
-library(sf)
-library(ggplot2)
-library(dplyr)
-library(shinycustomloader)
-library(shinydashboard)
-library(dataRetrieval)
-library(nhdplusTools)
-library(nwmHistoric)
-library(dygraphs)
 
 make_ts2 <- function(comid) {
   nwm <- readNWMdata(comid = comid)
@@ -91,20 +94,27 @@ make_ts4 <- function(nwm) {
   #   dyOptions(colors = c("darkcyan"),
   #           fillGraph = TRUE)
 }
-library(DT)
-library(formattable)
+
 make_table <- function(comid) {
   nwm <- readNWMdata(comid = comid)
   nwm$flow_cms <- round(nwm$flow_cms, 2)
   
   nwm <- head(nwm, 300)
   
-  as.datatable(formattable::formattable(nwm, align = c("l", rep("r", NCOL(nwm) - 1)),
-                                        list(`model` = formatter("span", style = ~ style(font.weight = "bold")),
-                                             `comid` = color_tile("cornsilk", "darkgoldenrod2"),
-                                             `flow_cms` = color_tile("azure1", "cadetblue4"))),
-               options = list(paging = TRUE, searching = TRUE))
+  nwm <- rename(nwm, Date = "dateTime",
+                "Flow rate (C/m/s)" = "flow_cms",
+                COMID = comid,
+                Model = model)
   
+  as.datatable(formattable(nwm, align = c("l", rep("r", NCOL(nwm) - 1)),
+                                        list(`Model` = formatter("span", style = ~ style(font.weight = "bold")),
+                                             # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
+                                             `COMID` = color_bar("honeydew"),
+                                             
+                                             `Date` = formatter("span", style = ~ style(font.weight = "bold")),
+                                             `Flow rate (C/m/s)` = color_tile("azure1", "cadetblue4"))),
+               options = list(paging = TRUE, searching = TRUE))
+
 }
 
 
