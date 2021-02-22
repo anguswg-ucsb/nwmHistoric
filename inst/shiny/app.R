@@ -32,6 +32,8 @@ source('R/helper.R')
 basemap <- basemap()
 second_map <- second_map()
 
+comid <- reactiveValues(comid = NULL)
+dateTSInput <- reactive(input$dateTS)
 reactiveValues(pt)
 
 ui <- dashboardPage(
@@ -55,7 +57,11 @@ ui <- dashboardPage(
              #        # end = tail(nwm$dateTime, n =1),
              #        label = h3("Date range")))))
              box(width = NULL, solidHeader = TRUE,
-                 leafletOutput("catchMap_2"))
+                 leafletOutput("catchMap_2")),
+             dateRangeInput("dateTS", label = "range",
+                            start = "1993-01-01",
+                            end = "2018-12-31"),
+             verbatimTextOutput("dateTSText")
              
       )
     )
@@ -86,7 +92,16 @@ server <- function(input, output) {
   output$catchTS      <- renderDygraph( {make_ts(pt)} )
 
   output$catchMessage <- renderText(k$txt)
+  rangeTS <- reactive({
+       range <- filter(date >= input$dateTS[1] & date < input$dateTS[2])
+    })
 
+  output$dateTSText <- renderText({
+    paste(as.character(input$dateTS[1]), as.character(input$dateTS[2]), sep = "/")
+  })
+  
+
+  
   observeEvent(input$catchMap_click, {
     # pt <<- NULL
     click <<- input$catchMap_click %>% 
@@ -103,7 +118,7 @@ server <- function(input, output) {
     
     comid = nldi$comid
     print(pt$comid)
-    # output$catchTS <- renderDygraph({ make_ts(pt) })
+    output$catchTS <- renderDygraph({ make_ts(comid) })
 
 
     catch_df <- get_nhdplus(comid = comid, realization = "catchment")

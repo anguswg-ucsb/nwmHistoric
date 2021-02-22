@@ -14,6 +14,13 @@ library(nhdplusTools)
 library(nwmHistoric)
 library(dygraphs)
 
+make_ts2 <- function(comid) {
+  nwm <- readNWMdata(comid = comid)
+  plotly::plot_ly(
+    nwm, x = ~dateTime,
+    y = ~flow_cms, type = "scatter", 
+    mode = "lines")
+}
 
 basemap <- function() {
   # pal = colorNumeric("inferno", reverse= TRUE, domain = today$size, n = 50)
@@ -48,19 +55,59 @@ make_ts <- function(comid) {
               fillGraph = TRUE)
 }
 
+make_ts3 <- function(comid, startDate, endDate) {
 
-# 
-# 
-# leaflet(options = leafletOptions(preferCanvas = TRUE, 
-#                                  updateWhenIdle = FALSE)) %>%
-# 
-#   setView(lon,lat,8) %>% 
-#   addTiles(group = "OSM") %>% 
-#   addProviderTiles(
-#     "CartoDB.Positron",    group = "Grayscale") %>%
-#   addProviderTiles(
-#     "Esri.WorldImagery",   group = "Imagery") %>%
-#   addWMSTiles(
+  nwm <- readNWMdata(comid = comid, startDate = NULL, endDate = NULL)
+    ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+    dygraph(ts)  %>% 
+    dyHighlight(highlightCircleSize = 2,
+                highlightSeriesBackgroundAlpha = .3) %>%
+    dyOptions(colors = c("darkcyan"),
+              fillGraph = TRUE)
+
+    # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+    # dygraph(ts)  %>% 
+    #   dyHighlight(highlightCircleSize = 2,
+    #             highlightSeriesBackgroundAlpha = .3) %>%
+    #   dyOptions(colors = c("darkcyan"),
+    #           fillGraph = TRUE)
+  
+}
+
+
+make_ts4 <- function(nwm) {
+  nwm <- nwm
+  ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+  dygraph(ts)  %>% 
+    dyHighlight(highlightCircleSize = 2,
+                highlightSeriesBackgroundAlpha = .3) %>%
+    dyOptions(colors = c("darkcyan"),
+              fillGraph = TRUE)
+  
+  # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+  # dygraph(ts)  %>% 
+  #   dyHighlight(highlightCircleSize = 2,
+  #             highlightSeriesBackgroundAlpha = .3) %>%
+  #   dyOptions(colors = c("darkcyan"),
+  #           fillGraph = TRUE)
+}
+library(DT)
+library(formattable)
+make_table <- function(nwm) {
+  
+  nwm$flow_cms <- round(nwm$flow_cms, 2)
+  
+  as.datatable(formattable::formattable(nwm, align = c("l", rep("r", NCOL(nwm2) - 1)),
+                                        list(`model` = formatter("span", style = ~ style(font.weight = "bold")),
+                                             `comid` = color_tile("cornsilk", "darkgoldenrod2"),
+                                             `flow_cms` = color_tile("azure1", "cadetblue4"))),
+               options = list(paging = TRUE, searching = TRUE))
+  
+}
+
+
+
+
 #     "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
 #     layers = "nexrad-n0r-900913",
 #     options = WMSTileOptions(format = "image/png", transparent = TRUE, opacity = .15), 

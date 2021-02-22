@@ -22,20 +22,20 @@ library(dataRetrieval)
 library(nhdplusTools)
 library(nwmHistoric)
 library(dygraphs)
+library(lubridate)
 
 source('R/helper.R')
 ```
 
-```{r, context="server"}
+```{r context="server"}
 #Initialize Maps 
 output$catchMap     <- renderLeaflet({ basemap() })
 output$catchMap_2     <- renderLeaflet({ second_map() })
 
-
-
 comid <- reactiveValues(comid = NULL)
- 
+# dateTSInput <- reactive(input$dateTS)
 ```
+
 
 
 FEMA {data-icon="fa-tint"}
@@ -46,26 +46,94 @@ Inputs {.sidebar}
 
 ### Model Filters
 ```{r}
-dateRangeInput("dateTS", label = "range", min = "1993-01-01", max = "2018-12-31")
-actionButton("catchButton", label = "date")
-
+dateRangeInput("dateTS", label = "Date Range Input",
+               start = "1993-01-01",
+               end = "2018-12-31")
+textOutput("dateTSText")
 ```
 
+### **Submit**
+```{r}
+shiny::actionButton("dateButton", label = "Enter", icon("search"))
+```
 
 Row 
 -----------------------------------------------------------------------
-### 100 Year Flood Plain 
+### Map 2
 ```{r}
 leafletOutput("catchMap_2")
 ```
 
-### bb
+### Time series
 ```{r}
 dygraphOutput("catchTS")
 ```
 
-```{r, context = "server"}
-  observeEvent(input$catchMap_click, {
+```{r context = "server"}
+
+# return_min <- reactive({ 
+#   input$dateTS[1]
+#   })
+# 
+# return_max <- reactive({ 
+#   input$dateTS[2]
+#   })
+observeEvent(input$dateButton, {
+  if(is.null(comid)){
+    NULL
+  } else {
+    nwm <- readNWMdata(comid = comid, startDate = as.Date(input$dateTS[1]), endDate = as.Date(input$dateTS[2]))
+    output$catchTS  <-  make_ts4(nwm)
+  }
+
+})
+# observeEvent(input$dateButton,{
+#   # nwm <- readNWMdata(comid = comid, startDate = as.Date(input$dateTS[1]), endDate = as.Date(input$dateTS[2]))
+#   dateMin  <- ymd_h(input$dateTS, tz = "UTC")
+#   print(dateMin)
+#     # nwm <- readNWMdata(comid = comid) %>% 
+#     #   filter(dateTime >= as.Date(input$dateTS[1]) & dateTime < as.Date(input$dateTS[2]))
+# print(as.Date(input$dateTS[1]))
+# print(as.POSIXct(gsub(" PST", " ",input$dateTS[1])))
+#   output$catchTS <- renderDygraph({
+#     make_ts4(nwm)
+# })
+# 
+# })
+
+```
+
+
+```{r context = "server"}
+ 
+# rangeTS <- reactive({
+#     
+#     if(is.null(input$dateTS)){
+#       nwm <- readNWMdata(comid = comid)
+#      ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+#     }else {
+#       nwm <- readNWMdata(comid = comid)
+#      ts = xts::xts(filter(as.data.frame(nwm$dateTime >= input$dateTS[1] & nwm$dateTime < input$dateTS[2])), order.by = input$dateTS, tz= 'UTC')
+#       
+#     }
+#     
+#      range <- filter(ts, dateTime >= input$dateTS[1] & dateTime < input$dateTS[2])
+#      
+#   })
+
+output$dateTSText <- renderText({
+  paste(as.character(input$dateTS[1]), as.character(input$dateTS[2]), sep = "/")
+})
+
+# observeEvent(input$button_rp, {
+#   values$query   <- query_ufokn(input$dateTS)
+  
+# output$catchTS      <- renderDygraph( {
+#   make_ts(comid) %>%
+#     dyRangeSelector(dateWindow = r$dateTS + 1)
+#   } )
+
+observeEvent(input$catchMap_click, {
     # pt <<- NULL
     click <<- input$catchMap_click %>%
       data.frame() %>%
@@ -77,18 +145,9 @@ dygraphOutput("catchTS")
     nldi <- findNLDI(location = pt)
     #
     comid <- nldi$comid
-
-    output$catchTS      <- renderDygraph( {make_ts(comid)} )
+    nwm <- readNWMdata(comid = comid)
+    output$catchTS      <- renderDygraph( {make_ts4(nwm) })
 })
-
-# observeEvent(input$catchButton, {
-#   if(is.null(comid)){
-#     NULL
-#   } else {
-#     output$catchTS  <-  make_ts(comid = input$comid)
-#   }
-# 
-# })
 ```
 
 Row 
@@ -148,6 +207,39 @@ leafletOutput("catchMap")
     }
   })
 ```
+
+
+Data Table {data-orientation=columns data-icon="fa-filter"}
+=====================================
+
+Inputs {.sidebar}
+-------------------------------------
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
