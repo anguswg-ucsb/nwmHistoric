@@ -214,13 +214,82 @@ Data Table {data-orientation=columns data-icon="fa-filter"}
 
 Inputs {.sidebar}
 -------------------------------------
-
-
+### Model Filters
 ```{r}
-
+# sliderInput("hour_table", dates$nwm_date_range$local_tz[1], value = 0, min = 0, max = 23, step = 1)
+shiny::actionButton("button_table", label = "Submit Query", icon("search"))
 ```
 
+Column {data-width=600}
+-----------------------------------------------------------------------
+### ff
+```{r}
+# `r renderText({ values$display })`
+dataTableOutput("catchDT")
+```
 
+Column {data-width=400}
+-----------------------------------------------------------------------
+### bb
+```{r}
+leafletOutput("catchMap_3") 
+```
+
+```{r context = "server"}
+output$catchMap_3 <- renderLeaflet({ basemap() })
+  observeEvent(input$catchMap_3_click, {
+    # pt <<- NULL
+    click <<- input$catchMap_3_click %>% 
+      data.frame() %>% 
+      dplyr::select(lat,lng)
+    
+    print(click)
+    pt <- sf::st_as_sf(click, 
+                        coords = c("lng", "lat"), 
+                        crs = 4326)
+  
+  
+    nldi <- findNLDI(location = pt)
+    
+    comid = nldi$comid
+    
+    print(comid)
+    # output$catchTS <- renderDygraph({ make_ts(pt) })
+
+
+    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    leafletProxy("catchMap_3") %>% 
+      clearMarkers() %>%
+      clearShapes() %>% 
+      addMarkers(data = pt) %>% 
+      addPolygons( data = catch_df,
+                   layerId = ~comid,
+                   col = 'blue')
+})
+```
+
+```{r context = "server"}
+
+  observeEvent(input$catchMap_3_click, {
+    # pt <<- NULL
+    click <<- input$catchMap_3_click %>% 
+      data.frame() %>% 
+      dplyr::select(lat,lng)
+    
+    print(click)
+    pt <- sf::st_as_sf(click, 
+                        coords = c("lng", "lat"), 
+                        crs = 4326)
+  
+  
+    nldi <- findNLDI(location = pt)
+    
+    comid = nldi$comid
+    
+    print(comid)
+    output$catchDT <- renderDataTable({ make_table(comid) })
+})
+```
 
 
 

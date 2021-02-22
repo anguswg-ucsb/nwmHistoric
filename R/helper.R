@@ -93,11 +93,13 @@ make_ts4 <- function(nwm) {
 }
 library(DT)
 library(formattable)
-make_table <- function(nwm) {
-  
+make_table <- function(comid) {
+  nwm <- readNWMdata(comid = comid)
   nwm$flow_cms <- round(nwm$flow_cms, 2)
   
-  as.datatable(formattable::formattable(nwm, align = c("l", rep("r", NCOL(nwm2) - 1)),
+  nwm <- head(nwm, 300)
+  
+  as.datatable(formattable::formattable(nwm, align = c("l", rep("r", NCOL(nwm) - 1)),
                                         list(`model` = formatter("span", style = ~ style(font.weight = "bold")),
                                              `comid` = color_tile("cornsilk", "darkgoldenrod2"),
                                              `flow_cms` = color_tile("azure1", "cadetblue4"))),
