@@ -122,8 +122,6 @@ make_ts4 <- function(nwm) {
   #           fillGraph = TRUE)
 
 make_ts5 <- function(ts) {
-    nwm <- nwm %>% 
-      head(10000)
     ts <- ts
     dygraph(ts)  %>% 
       dyHighlight(highlightCircleSize = 2,

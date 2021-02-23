@@ -85,23 +85,25 @@ dateTSText <- eventReactive(input$dateButton, {
    dateTSText()
   })
 
-  output$catchTS <- renderDygraph({
-    if(is.null(comid)) {
-      NULL
-    } else {
-      nwm <- readNWMdata(comid = comid) 
-  ts2 <- xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
-  
-    ts2[dateTSText()]
-    
-    dygraph(ts2)  %>% 
-      dyHighlight(highlightCircleSize = 2,
-                  highlightSeriesBackgroundAlpha = .3) %>%
-      dyOptions(colors = c("darkcyan"),
-                fillGraph = TRUE) %>% 
-      dyRangeSelector()
-    }
-  })
+  # output$catchTS <- renderDygraph({
+  #   if(is.null(comid)) {
+  #     NULL
+  #   } else {
+  #     nwm <- readNWMdata(comid = comid) 
+  #     nwm2 <- head(nwm, 15)
+  #     print(nwm2)
+  # ts2 <- xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+  # 
+  #   ts2[dateTSText()]
+  #   
+  #   dygraph(ts2)  %>% 
+  #     dyHighlight(highlightCircleSize = 2,
+  #                 highlightSeriesBackgroundAlpha = .3) %>%
+  #     dyOptions(colors = c("darkcyan"),
+  #               fillGraph = TRUE) %>% 
+  #     dyRangeSelector()
+  #   }
+  # })
 # return_min <- reactive({ 
 #   input$dateTS[1]
 #   })
@@ -169,8 +171,52 @@ observeEvent(input$catchMap_click, {
     #
     comid <- nldi$comid
     nwm <- readNWMdata(comid = comid)
-    output$catchTS      <- renderDygraph( {make_ts4(nwm) })
+    # output$catchTS      <- renderDygraph( {make_ts4(nwm) })
+
+    output$catchTS <- renderDygraph({
+
+        nwm <- readNWMdata(comid = comid)
+        nwm2 <- head(nwm, 15)
+        print(nwm2)
+        make_ts4(nwm)
+  })
 })
+
+
+# 
+# observeEvent(input$catchMap_click, {
+#   if(!is.null(input$dateButton)) {
+#     click <<- input$catchMap_click %>%
+#       data.frame() %>%
+#       dplyr::select(lat,lng)
+#     print(click)
+#     pt <- sf::st_as_sf(click,
+#                         coords = c("lng", "lat"),
+#                         crs = 4326)
+#     nldi <- findNLDI(location = pt)
+#   
+#     comid <- nldi$comid
+#     nwm <- readNWMdata(comid = comid)
+#     
+#     output$catchTS <- renderDygraph({
+#    
+#         nwm <- readNWMdata(comid = comid) 
+#         nwm2 <- head(nwm, 15)
+#         print(nwm2)
+#      
+#    
+#        ts2 <- xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+#         ts2[dateTSText()]
+#     
+#         dygraph(ts2)  %>% 
+#           dyHighlight(highlightCircleSize = 2,
+#                   highlightSeriesBackgroundAlpha = .3) %>%
+#           dyOptions(colors = c("darkcyan"),
+#                 fillGraph = TRUE) %>% 
+#           dyRangeSelector()
+#     })
+#   }
+# })
 ```
 
 Row 
