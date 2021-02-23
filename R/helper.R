@@ -49,7 +49,8 @@ second_map <- function() {
 
 
 make_ts <- function(comid) {
-  nwm <- readNWMdata(comid = comid)
+  nwm <- readNWMdata(comid = comid) %>% 
+    head(10000)
   ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   dygraph(ts)  %>% 
   dyHighlight(highlightCircleSize = 2,
@@ -59,7 +60,7 @@ make_ts <- function(comid) {
 }
 
 make_ts3 <- function(comid, startDate, endDate) {
-
+f = ts[NULL]
   nwm <- readNWMdata(comid = comid, startDate = NULL, endDate = NULL)
     ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
     dygraph(ts)  %>% 
@@ -78,25 +79,64 @@ make_ts3 <- function(comid, startDate, endDate) {
 }
 
 
+
+
 make_ts4 <- function(nwm) {
-  nwm <- nwm
+  nwm <- nwm %>%
+  head(10000)
   ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   dygraph(ts)  %>% 
     dyHighlight(highlightCircleSize = 2,
                 highlightSeriesBackgroundAlpha = .3) %>%
     dyOptions(colors = c("darkcyan"),
-              fillGraph = TRUE)
+              fillGraph = TRUE) %>% 
+    dyRangeSelector()
   
+  #if(is.null(range)) {
+  # nwm <- nwm %>% 
+  #   head(10000)
+  # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+  # dygraph(ts)  %>% 
+  #   dyHighlight(highlightCircleSize = 2,
+  #               highlightSeriesBackgroundAlpha = .3) %>%
+  #   dyOptions(colors = c("darkcyan"),
+  #             fillGraph = TRUE) %>% 
+  #   dyRangeSelector()
+  # } else {
+  # nwm <- nwm %>% 
+  #   head(10000)
+  # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+  # ts2 <- ts[as.character(range)]
+  # dygraph(ts2)  %>% 
+  #   dyHighlight(highlightCircleSize = 2,
+  #               highlightSeriesBackgroundAlpha = .3) %>%
+  #   dyOptions(colors = c("darkcyan"),
+  #             fillGraph = TRUE) %>% 
+  #   dyRangeSelector()
+  }
   # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   # dygraph(ts)  %>% 
   #   dyHighlight(highlightCircleSize = 2,
   #             highlightSeriesBackgroundAlpha = .3) %>%
   #   dyOptions(colors = c("darkcyan"),
   #           fillGraph = TRUE)
+
+make_ts5 <- function(ts) {
+    nwm <- nwm %>% 
+      head(10000)
+    ts <- ts
+    dygraph(ts)  %>% 
+      dyHighlight(highlightCircleSize = 2,
+                  highlightSeriesBackgroundAlpha = .3) %>%
+      dyOptions(colors = c("darkcyan"),
+                fillGraph = TRUE) %>% 
+      dyRangeSelector()
 }
 
 make_table <- function(comid) {
   nwm <- readNWMdata(comid = comid)
+  
+  
   nwm$flow_cms <- round(nwm$flow_cms, 2)
   
   nwm <- head(nwm, 300)

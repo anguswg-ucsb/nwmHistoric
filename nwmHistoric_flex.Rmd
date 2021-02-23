@@ -54,7 +54,7 @@ Inputs {.sidebar}
 dateRangeInput("dateTS", label = "Date Range Input",
                start = "1993-01-01",
                end = "2018-12-31")
-textOutput("dateTSText")
+verbatimTextOutput("dateTSText")
 ```
 
 ### **Submit**
@@ -75,7 +75,33 @@ dygraphOutput("catchTS")
 ```
 
 ```{r context = "server"}
+ 
+dateTSText <- eventReactive(input$dateButton, {
+  paste0("'", as.character(input$dateTS[1]), "/", as.character(input$dateTS[2]), "'")
+ 
+  })
+  
+  output$dateTSText <- renderText({
+   dateTSText()
+  })
 
+  output$catchTS <- renderDygraph({
+    if(is.null(comid)) {
+      NULL
+    } else {
+      nwm <- readNWMdata(comid = comid) 
+  ts2 <- xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+  
+    ts2[dateTSText()]
+    
+    dygraph(ts2)  %>% 
+      dyHighlight(highlightCircleSize = 2,
+                  highlightSeriesBackgroundAlpha = .3) %>%
+      dyOptions(colors = c("darkcyan"),
+                fillGraph = TRUE) %>% 
+      dyRangeSelector()
+    }
+  })
 # return_min <- reactive({ 
 #   input$dateTS[1]
 #   })
@@ -83,27 +109,19 @@ dygraphOutput("catchTS")
 # return_max <- reactive({ 
 #   input$dateTS[2]
 #   })
-observeEvent(input$dateButton, {
-  if(is.null(comid)){
-    NULL
-  } else {
-    nwm <- readNWMdata(comid = comid, startDate = as.Date(input$dateTS[1]), endDate = as.Date(input$dateTS[2]))
-    output$catchTS  <-  make_ts4(nwm)
-  }
+# observeEvent(input$dateButton, {
+#   
+#   nwm <- readNWMdata(comid = 101) %>%
+#     head(10000)
+#   ts <- xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+#   ts[paste(as.character(input$dateTS[1]), as.character(input$dateTS[2]), sep = "/")]
+#  mm =  ts['1993-01-01/1993-03-15']
+# f = '1993-03-16/1993-11-15'
+#     output$catchTS  <-  make_ts5(ts)
+#   }
+# )
 
-})
-# observeEvent(input$dateButton,{
-#   # nwm <- readNWMdata(comid = comid, startDate = as.Date(input$dateTS[1]), endDate = as.Date(input$dateTS[2]))
-#   dateMin  <- ymd_h(input$dateTS, tz = "UTC")
-#   print(dateMin)
-#     # nwm <- readNWMdata(comid = comid) %>% 
-#     #   filter(dateTime >= as.Date(input$dateTS[1]) & dateTime < as.Date(input$dateTS[2]))
-# print(as.Date(input$dateTS[1]))
-# print(as.POSIXct(gsub(" PST", " ",input$dateTS[1])))
-#   output$catchTS <- renderDygraph({
-#     make_ts4(nwm)
-# })
-# 
+
 # })
 
 ```
@@ -126,9 +144,9 @@ observeEvent(input$dateButton, {
 #      
 #   })
 
-output$dateTSText <- renderText({
-  paste(as.character(input$dateTS[1]), as.character(input$dateTS[2]), sep = "/")
-})
+# output$dateTSText <- renderText({
+#   class(paste(as.character(input$dateTS[1]), as.character(input$dateTS[2]), sep = "/"))
+# })
 
 # observeEvent(input$button_rp, {
 #   values$query   <- query_ufokn(input$dateTS)
@@ -165,25 +183,19 @@ leafletOutput("catchMap")
 
 ```{r context = "server"}
   observeEvent(input$catchMap_click, {
-    # pt <<- NULL
+   if(!is.null(input$catchMap_click)) {
     click <<- input$catchMap_click %>% 
       data.frame() %>% 
       dplyr::select(lat,lng)
-    
     print(click)
     pt <- sf::st_as_sf(click, 
                         coords = c("lng", "lat"), 
                         crs = 4326)
   
-  
     nldi <- findNLDI(location = pt)
-    
     comid = nldi$comid
-    
     print(comid)
-    # output$catchTS <- renderDygraph({ make_ts(pt) })
-
-
+  
     catch_df <- get_nhdplus(comid = comid, realization = "catchment")
     leafletProxy("catchMap") %>% 
       clearMarkers() %>%
@@ -199,6 +211,52 @@ leafletOutput("catchMap")
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
                    col = 'blue')
+    leafletProxy("catchMap_3") %>% 
+      clearMarkers() %>%
+      clearShapes() %>% 
+      addMarkers(data = pt) %>% 
+      addPolygons( data = catch_df,
+                   layerId = ~comid,
+                   col = 'blue')
+    output$catchDT <- renderDataTable({ make_table(comid) })
+   } 
+   # if {!
+   #    click <<- input$catchMap_3_click %>%
+   #    data.frame() %>%
+   #    dplyr::select(lat,lng)
+   #  print(click)
+   #  pt <- sf::st_as_sf(click,
+   #                      coords = c("lng", "lat"),
+   #                      crs = 4326)
+   #  nldi <- findNLDI(location = pt)
+   # 
+   #  comid = nldi$comid
+   #  print(comid)
+   # 
+   #  catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+   #  leafletProxy("catchMap") %>%
+   #    clearMarkers() %>%
+   #    clearShapes() %>%
+   #    addMarkers(data = pt) %>%
+   #    addPolygons( data = catch_df,
+   #                 layerId = ~comid,
+   #                 col = 'blue')
+   #  leafletProxy("catchMap_2") %>%
+   #    clearMarkers() %>%
+   #    clearShapes() %>%
+   #    addMarkers(data = pt,
+   #               layerId = ~comid) %>%
+   #    addPolygons( data = catch_df,
+   #                 col = 'blue')
+   #  leafletProxy("catchMap_3") %>%
+   #    clearMarkers() %>%
+   #    clearShapes() %>%
+   #    addMarkers(data = pt) %>%
+   #    addPolygons( data = catch_df,
+   #                 layerId = ~comid,
+   #                 col = 'blue')
+   #  output$catchDT <- renderDataTable({ make_table(comid) })
+   # }
   })
 
   observe({ # Observer to respond to zoom / pan of map1 and apply to map2
@@ -270,6 +328,20 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
       addPolygons( data = catch_df,
                    layerId = ~comid,
                    col = 'blue')
+    leafletProxy("catchMap") %>%
+      clearMarkers() %>%
+      clearShapes() %>%
+      addMarkers(data = pt) %>%
+      addPolygons( data = catch_df,
+                   layerId = ~comid,
+                   col = 'blue')
+    leafletProxy("catchMap_2") %>%
+      clearMarkers() %>%
+      clearShapes() %>%
+      addMarkers(data = pt,
+                 layerId = ~comid) %>%
+      addPolygons( data = catch_df,
+                   col = 'blue')
 })
 ```
 
@@ -290,9 +362,11 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
     nldi <- findNLDI(location = pt)
     
     comid = nldi$comid
-    
     print(comid)
+    
     output$catchDT <- renderDataTable({ make_table(comid) })
+    nwm <- readNWMdata(comid = comid)
+    output$catchTS      <- renderDygraph( {make_ts4(nwm) })
 })
 ```
 
