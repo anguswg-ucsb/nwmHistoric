@@ -156,8 +156,39 @@ make_table <- function(comid) {
 }
 
 
+make_table2 <- function(comid) {
+  
+  catch_df <- get_nhdplus(comid = 101, realization = "catchment")
 
+  conus <- USAboundaries::us_counties()
 
+  tmp1 <- st_intersection(catch_df, conus) %>%
+    st_drop_geometry() %>% 
+    select(comid = featureid,
+           areasqkm,
+           county = name,
+           state = state_name) %>% 
+    filter(county == "Polk") %>% 
+    mutate(across(1:4, as.character))
+  
+  tmp2 <- tmp1 %>% 
+    tidyr::pivot_longer(1:4, names_to = " ", values_to = "  ")
+
+  DT::datatable(tmp2, options = list(paging = TRUE, searching = TRUE))
+  kableExtra::kbl(tmp1, col.names = c('COMID', 'Area sq. km.', "County", "State"), escape = F, align = "c") %>%
+    kableExtra::kable_material(c("striped", "hover")) %>% 
+    kableExtra::kable_styling(position = "center")
+  
+# as.datatable(formattable(tmp1, align = c("l", rep("r", NCOL(nwm) - 1)),
+#                          list(`Model` = formatter("span", style = ~ style(font.weight = "bold")),
+#                               # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
+#                               `COMID` = color_bar("honeydew"),
+#                               
+#                               `Date` = formatter("span", style = ~ style(font.weight = "bold")),
+#                               `Flow rate (C/m/s)` = color_tile("azure1", "cadetblue4"))),
+#              options = list(paging = TRUE, searching = TRUE))
+
+}
 #     "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
 #     layers = "nexrad-n0r-900913",
 #     options = WMSTileOptions(format = "image/png", transparent = TRUE, opacity = .15), 
