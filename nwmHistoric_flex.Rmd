@@ -37,13 +37,13 @@ source('R/helper.R')
 output$catchMap     <- renderLeaflet({ basemap() })
 output$catchMap_2     <- renderLeaflet({ second_map() })
 
-comid <- reactiveValues(comid = NULL)
+comid <<- reactiveValues(comid = NULL)
 # dateTSInput <- reactive(input$dateTS)
 ```
 
 
 
-FEMA {data-icon="fa-tint"}
+NWM {data-icon="fa-tint"}
 =====================================
 
 Inputs {.sidebar}
@@ -55,6 +55,7 @@ dateRangeInput("dateTS", label = "Date Range Input",
                start = "1993-01-01",
                end = "2018-12-31")
 verbatimTextOutput("dateTSText")
+htmlOutput("areaTable")
 ```
 
 ### **Submit**
@@ -64,14 +65,21 @@ shiny::actionButton("dateButton", label = "Enter", icon("search"))
 
 Row 
 -----------------------------------------------------------------------
-### Map 2
+### COMID
 ```{r}
-leafletOutput("catchMap_2")
+valueBoxOutput("comidBox")
 ```
 
+Row 
+-----------------------------------------------------------------------
 ### Time series
 ```{r}
 dygraphOutput("catchTS")
+```
+
+### Map 2
+```{r}
+leafletOutput("catchMap_2")
 ```
 
 ```{r context = "server"}
@@ -175,9 +183,8 @@ observeEvent(input$catchMap_click, {
 
     output$catchTS <- renderDygraph({
 
-        nwm <- readNWMdata(comid = comid)
-        nwm2 <- head(nwm, 15)
-        print(nwm2)
+        # nwm <- readNWMdata(comid = comid)
+        print("map1_click")
         make_ts4(nwm)
   })
 })
@@ -226,7 +233,6 @@ Row
 leafletOutput("catchMap")
 ```
 
-
 ```{r context = "server"}
   observeEvent(input$catchMap_click, {
    if(!is.null(input$catchMap_click)) {
@@ -240,8 +246,18 @@ leafletOutput("catchMap")
   
     nldi <- findNLDI(location = pt)
     comid = nldi$comid
+    
     print(comid)
-  
+    print("map1_click2")
+    
+    output$comidBox <- renderValueBox({
+    valueBox(value = paste("COMID: ", comid),
+      icon = "fa-id-badge",
+      color = "primary") })
+    output$comidBox2 <- renderValueBox({
+    valueBox(value = paste("COMID: ", comid),
+      icon = "fa-id-badge",
+      color = "primary") })
     catch_df <- get_nhdplus(comid = comid, realization = "catchment")
     leafletProxy("catchMap") %>% 
       clearMarkers() %>%
@@ -264,6 +280,8 @@ leafletOutput("catchMap")
       addPolygons( data = catch_df,
                    layerId = ~comid,
                    col = 'blue')
+  
+    output$areaTable <- renderText ({ make_table2(comid) })
     output$catchDT <- renderDataTable({ make_table(comid) })
    } 
    # if {!
@@ -305,6 +323,7 @@ leafletOutput("catchMap")
    # }
   })
 
+# catchMap and catchMap_2 are linked while zooming
   observe({ # Observer to respond to zoom / pan of map1 and apply to map2
     coords <- input$catchMap_center
     zoom <- input$catchMap_zoom
@@ -317,7 +336,6 @@ leafletOutput("catchMap")
   })
 ```
 
-
 Data Table {data-orientation=columns data-icon="fa-filter"}
 =====================================
 
@@ -329,9 +347,16 @@ Inputs {.sidebar}
 shiny::actionButton("button_table", label = "Submit Query", icon("search"))
 ```
 
+Row
+-----------------------------------------------------------------------
+### COMID
+```{r}
+valueBoxOutput("comidBox2")
+```
+
 Column {data-width=600}
 -----------------------------------------------------------------------
-### ff
+### Data table
 ```{r}
 # `r renderText({ values$display })`
 dataTableOutput("catchDT")
@@ -339,12 +364,13 @@ dataTableOutput("catchDT")
 
 Column {data-width=400}
 -----------------------------------------------------------------------
-### bb
+### Map 3
 ```{r}
 leafletOutput("catchMap_3") 
 ```
 
 ```{r context = "server"}
+# load polygons when map 3 is clicked
 output$catchMap_3 <- renderLeaflet({ basemap() })
   observeEvent(input$catchMap_3_click, {
     # pt <<- NULL
@@ -365,7 +391,18 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
     print(comid)
     # output$catchTS <- renderDygraph({ make_ts(pt) })
 
-
+    output$comidBox2 <- renderValueBox({
+      valueBox(value = paste("COMID: ", comid),
+        icon = "fa-id-badge",
+        color = "primary") })
+    output$comidBox <- renderValueBox({
+      valueBox(value = paste("COMID: ", comid),
+        icon = "fa-id-badge",
+        color = "primary") })
+    
+    print("map3_click1")
+    # output$areaTable <- renderText({ make_table2(comid) })
+    # 
     catch_df <- get_nhdplus(comid = comid, realization = "catchment")
     leafletProxy("catchMap_3") %>% 
       clearMarkers() %>%

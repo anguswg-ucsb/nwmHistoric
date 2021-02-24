@@ -82,8 +82,7 @@ f = ts[NULL]
 
 
 make_ts4 <- function(nwm) {
-  nwm <- nwm %>%
-  head(10000)
+  nwm <- nwm 
   ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   dygraph(ts)  %>% 
     dyHighlight(highlightCircleSize = 2,
@@ -158,26 +157,36 @@ make_table <- function(comid) {
 
 make_table2 <- function(comid) {
   
-  catch_df <- get_nhdplus(comid = 101, realization = "catchment")
+  catch_df <- get_nhdplus(comid = comid, realization = "catchment")
 
-  conus <- USAboundaries::us_counties()
+  conus <- USAboundaries::us_counties() %>% 
+    select(name, state_name)
 
-  tmp1 <- st_intersection(catch_df, conus) %>%
-    st_drop_geometry() %>% 
-    select(comid = featureid,
-           areasqkm,
-           county = name,
-           state = state_name) %>% 
-    filter(county == "Polk") %>% 
-    mutate(across(1:4, as.character))
+  tmp1 <- st_intersection(catch_df, conus) %>% 
+    st_drop_geometry()
   
-  tmp2 <- tmp1 %>% 
+  tmp1$areasqkm <- round(tmp1$areasqkm, 2)
+  
+  tmp1 <- tmp1 %>% 
+    select(COMID = featureid,
+           "Area (sq. km)" = areasqkm,
+           State = state_name,
+           County = name) %>% 
+    slice(n=1) %>% 
+    mutate(across(1:4, as.character)) %>% 
     tidyr::pivot_longer(1:4, names_to = " ", values_to = "  ")
 
-  DT::datatable(tmp2, options = list(paging = TRUE, searching = TRUE))
-  kableExtra::kbl(tmp1, col.names = c('COMID', 'Area sq. km.', "County", "State"), escape = F, align = "c") %>%
-    kableExtra::kable_material(c("striped", "hover")) %>% 
-    kableExtra::kable_styling(position = "center")
+  
+  knitr::kable(tmp1, col.names = c('', " "), booktabs= T,
+      table.attr ='class="table" style="color: black"', escape = F, align = "c") %>%
+    kableExtra::kable_classic("striped") %>% 
+    # kableExtra::kable_material(c("striped", "hover")) %>% 
+    kableExtra::kable_styling(position = "center") %>% 
+    kableExtra::column_spec(1, background = "#BCD4E6") %>% 
+    kableExtra::column_spec(2, background = "azure")
+  
+  
+}
   
 # as.datatable(formattable(tmp1, align = c("l", rep("r", NCOL(nwm) - 1)),
 #                          list(`Model` = formatter("span", style = ~ style(font.weight = "bold")),
@@ -188,7 +197,7 @@ make_table2 <- function(comid) {
 #                               `Flow rate (C/m/s)` = color_tile("azure1", "cadetblue4"))),
 #              options = list(paging = TRUE, searching = TRUE))
 
-}
+
 #     "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
 #     layers = "nexrad-n0r-900913",
 #     options = WMSTileOptions(format = "image/png", transparent = TRUE, opacity = .15), 
