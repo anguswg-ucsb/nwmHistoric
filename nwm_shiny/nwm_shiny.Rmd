@@ -5,7 +5,7 @@ output:
   flexdashboard::flex_dashboard:
     navbar:
       - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
-    theme: cerulean
+    theme: flatly
     orientation: row
     vertical_layout: fill
 ---
@@ -29,8 +29,7 @@ library(dygraphs)
 library(DT)
 library(formattable)
 
-source('R/helper.R')
-# rmarkdown::run("nwm_shiny/nwm_shiny.Rmd", shiny_args = list(display.mode = "showcase"))
+source('../nwm_shiny/helper.R')
 ```
 
 ```{r context="server"}
@@ -52,6 +51,7 @@ Inputs {.sidebar}
 
 ### Model Filters
 ```{r}
+
 dateRangeInput("dateTS", label = "Date Range Input",
                start = "1993-01-01",
                end = "2018-12-31",
@@ -68,7 +68,7 @@ shiny::actionButton("dateButton", label = "Enter", icon("search"))
 
 Row 
 -----------------------------------------------------------------------
-### COMID
+### 
 ```{r}
 valueBoxOutput("comidBox")
 ```
@@ -112,7 +112,9 @@ leafletOutput("catchMap")
       addMarkers(data = pt) %>% 
       addPolygons( data = catch_df,
                    layerId = ~comid,
-                   col = 'blue')
+                   col = 'blue') 
+      # zoom_to_catch(catch_df, comid)
+    
     leafletProxy("catchMap_2") %>%
       clearMarkers() %>%
       clearShapes() %>%
@@ -325,7 +327,8 @@ observeEvent(input$dateButton, {
 
     output$catchTS <- renderDygraph({
       ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
-      dygraph(tmp1)  %>%
+      
+      dygraph(ts)  %>%
         dyHighlight(highlightCircleSize = 2,
                 highlightSeriesBackgroundAlpha = .3) %>%
         dyOptions(colors = c("darkcyan"),
@@ -334,7 +337,7 @@ observeEvent(input$dateButton, {
     })
   }
 })
-
+# shiny::runApp("nwmHistoric_flex.Rmd", display.mode="showcase")
 # 
 # observeEvent(input$catchMap_click, {
 #   if(!is.null(input$dateButton)) {
@@ -383,9 +386,9 @@ shiny::actionButton("button_table", label = "Submit Query", icon("search"))
 ```
 
 
-Column {data-width=800}
+Column {data-width=600}
 -----------------------------------------------------------------------
-### COMID
+### 
 ```{r}
 valueBoxOutput("comidBox2")
 ```
@@ -396,7 +399,7 @@ valueBoxOutput("comidBox2")
 dataTableOutput("catchDT")
 ```
 
-Column {data-width=600}
+Column {data-width=800}
 -----------------------------------------------------------------------
 ### Map 3
 ```{r}
@@ -427,12 +430,12 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
 
     output$comidBox2 <- renderValueBox({
       valueBox(value = paste("COMID: ", comid),
-        icon = "fa-id-badge",
-        color = "primary") })
+        icon = "fa-water",
+        color = "success") })
     output$comidBox <- renderValueBox({
       valueBox(value = paste("COMID: ", comid),
-        icon = "fa-id-badge",
-        color = "primary") })
+        icon = "fa-water",
+        color = "success") })
     
     print("map3_click1")
     # output$areaTable <- renderText({ make_table2(comid) })
@@ -486,31 +489,3 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
     output$catchTS      <- renderDygraph( {make_ts4(nwm) })
 })
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
