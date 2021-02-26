@@ -62,7 +62,7 @@ second_map <- function() {
 
 
 make_ts <- function(comid) {
-  nwm <- readNWMdata(comid = comid) %>% 
+  nwm <- readNWMdata(comid = 101) %>% 
     head(10000)
   ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   dygraph(ts)  %>% 
