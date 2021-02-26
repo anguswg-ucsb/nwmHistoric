@@ -125,7 +125,8 @@ make_ts4 <- function(nwm) {
   #   dyOptions(colors = c("darkcyan"),
   #             fillGraph = TRUE) %>% 
   #   dyRangeSelector()
-  }
+}
+
   # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   # dygraph(ts)  %>% 
   #   dyHighlight(highlightCircleSize = 2,

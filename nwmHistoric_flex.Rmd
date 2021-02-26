@@ -498,13 +498,368 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
 
 
 
+####################################################################
+# ================================================================
+########################## COPY OFF DATA ###########################
+# ================================================================
+####################################################################
+```{r setup, include = FALSE}
+library(shiny)
+library(flexdashboard)
+library(shinycustomloader)
+
+library(dataRetrieval)
+library(nhdplusTools)
+library(nwmHistoric)
+
+library(lubridate)
+
+library(leaflet)
+library(sf)
+library(ggplot2)
+library(dplyr)
+library(dygraphs)
+library(DT)
+library(formattable)
+
+source('../nwm_shiny/helper.R')
+```
+
+```{r context="server"}
+#Initialize Maps 
+output$catchMap     <- renderLeaflet({ basemap() })
+output$catchMap_2     <- renderLeaflet({ second_map() })
+
+comid <<- reactiveValues(comid = NULL)
+
+# get_nwm <- reactive({
+#   if(is.null(comid)) {
+#     NULL
+#   } else {
+#   nwm <- readNWMdata(comid = comid)
+#   nwm
+#   }
+# })
+# 
+# nwm <- get_nwm()
+
+# nwm <<- eventReactive(input$catchMap_click, {
+#   click <<- input$catchMap_click %>%
+#       data.frame() %>%
+#       dplyr::select(lat,lng)
+#     print(click)
+#     pt <- sf::st_as_sf(click,
+#                         coords = c("lng", "lat"),
+#                         crs = 4326)
+#     nldi <- findNLDI(location = pt)
+#     
+#     comid <- nldi$comid
+#     nwm <- readNWMdata(comid = comid)
+#     print("NWM test")
+# })
+# dateTSInput <- reactive(input$dateTS)
+```
 
 
 
+NWM {data-icon="fa-tint"}
+=====================================
+
+Inputs {.sidebar}
+-------------------------------------
+
+### Model Filters
+```{r}
+
+dateRangeInput("dateTS", label = "Date Range Input",
+               start = "1993-01-01",
+               end = "2018-12-31",
+               format = "yyyy mm dd",
+               weekstart = 1)
+verbatimTextOutput("dateTSText")
+htmlOutput("areaTable")
+```
+
+### **Submit**
+```{r}
+shiny::actionButton("dateButton", label = "Enter", icon("search"))
+```
+
+Row 
+-----------------------------------------------------------------------
+### 
+```{r}
+valueBoxOutput("comidBox")
+```
+
+Row 
+-----------------------------------------------------------------------
+### Draw
+```{r}
+leafletOutput("catchMap")
+```
+
+```{r context = "server"}
+
+# Clicking on map 1 outputs Value boxes on both pages + catchment polygons + Dat table + info panel
+  observeEvent(input$catchMap_click, {
+   if(!is.null(input$catchMap_click)) {
+    click <<- input$catchMap_click %>% 
+      data.frame() %>% 
+      dplyr::select(lat,lng)
+    print(click)
+    pt <- sf::st_as_sf(click, 
+                        coords = c("lng", "lat"), 
+                        crs = 4326)
+  
+    nldi <- findNLDI(location = pt)
+    comid = nldi$comid
+    
+    print(comid)
+    print("map1_click2")
+    
+    output$comidBox <- renderValueBox({
+    valueBox(value = paste("COMID: ", comid),
+      icon = "fa-id-badge",
+      color = "primary") })
+    output$comidBox2 <- renderValueBox({
+    valueBox(value = paste("COMID: ", comid),
+      icon = "fa-id-badge",
+      color = "primary") })
+    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    leafletProxy("catchMap") %>% 
+      clearMarkers() %>%
+      clearShapes() %>% 
+      addMarkers(data = pt) %>% 
+      addPolygons( data = catch_df,
+                   layerId = ~comid,
+                   col = 'blue') 
+      # zoom_to_catch(catch_df, comid)
+    
+    leafletProxy("catchMap_2") %>%
+      clearMarkers() %>%
+      clearShapes() %>%
+      addMarkers(data = pt,
+                 layerId = ~comid) %>%
+      addPolygons( data = catch_df,
+                   col = 'blue')
+    leafletProxy("catchMap_3") %>% 
+      clearMarkers() %>%
+      clearShapes() %>% 
+      addMarkers(data = pt) %>% 
+      addPolygons( data = catch_df,
+                   layerId = ~comid,
+                   col = 'blue')
+  
+    output$areaTable <- renderText ({ make_table2(comid) })
+    output$catchDT <- renderDataTable({ make_table(comid) })
+   } 
+})
+
+# catchMap and catchMap_2 are linked while zooming
+  observe({ # Observer to respond to zoom / pan of map1 and apply to map2
+    coords <- input$catchMap_center
+    zoom <- input$catchMap_zoom
+    print(coords)
+    print(zoom)
+    if (!is.null(coords)) {
+      leafletProxy("catchMap_2") %>%
+        setView(lat = coords$lat, lng = coords$lng, zoom = zoom)
+    }
+})
+```
+
+Row 
+-----------------------------------------------------------------------
+### Time series
+```{r}
+dygraphOutput("catchTS")
+```
+
+### Map 2
+```{r}
+leafletOutput("catchMap_2")
+```
+
+```{r context = "server"}
+# testing reactivity with date range input & button
+dateTSText <- eventReactive(input$dateButton, {
+  paste0("'", as.character(input$dateTS[1]), "/", as.character(input$dateTS[2]), "'")
+ 
+  })
+  
+  output$dateTSText <- renderText({
+   dateTSText()
+  })
+
+  # output$catchTS <- renderDygraph({
+  #   if(is.null(comid)) {
+  #     NULL
+  #   } else {
+  #     nwm <- readNWMdata(comid = comid) 
+  #     nwm2 <- head(nwm, 15)
+  #     print(nwm2)
+  # ts2 <- xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+  # 
+  #   ts2[dateTSText()]
+  #   
+  #   dygraph(ts2)  %>% 
+  #     dyHighlight(highlightCircleSize = 2,
+  #                 highlightSeriesBackgroundAlpha = .3) %>%
+  #     dyOptions(colors = c("darkcyan"),
+  #               fillGraph = TRUE) %>% 
+  #     dyRangeSelector()
+  #   }
+  # })
+# return_min <- reactive({ 
+#   input$dateTS[1]
+#   })
+# 
+# return_max <- reactive({ 
+#   input$dateTS[2]
+#   })
+# observeEvent(input$dateButton, {
+#   
+#   nwm <- readNWMdata(comid = 101) %>%
+#     head(10000)
+#   ts <- xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+#   ts[paste(as.character(input$dateTS[1]), as.character(input$dateTS[2]), sep = "/")]
+#  mm =  ts['1993-01-01/1993-03-15']
+# f = '1993-03-16/1993-11-15'
+#     output$catchTS  <-  make_ts5(ts)
+#   }
+# )
+
+# })
+
+```
 
 
+```{r context = "server"}
+ 
+# rangeTS <- reactive({
+#     
+#     if(is.null(input$dateTS)){
+#       nwm <- readNWMdata(comid = comid)
+#      ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+#     }else {
+#       nwm <- readNWMdata(comid = comid)
+#      ts = xts::xts(filter(as.data.frame(nwm$dateTime >= input$dateTS[1] & nwm$dateTime < input$dateTS[2])), order.by = input$dateTS, tz= 'UTC')
+#       
+#     }
+#     
+#      range <- filter(ts, dateTime >= input$dateTS[1] & dateTime < input$dateTS[2])
+#      
+#   })
+
+# output$dateTSText <- renderText({
+#   class(paste(as.character(input$dateTS[1]), as.character(input$dateTS[2]), sep = "/"))
+# })
+
+# observeEvent(input$button_rp, {
+#   values$query   <- query_ufokn(input$dateTS)
+  
+# output$catchTS      <- renderDygraph( {
+#   make_ts(comid) %>%
+#     dyRangeSelector(dateWindow = r$dateTS + 1)
+#   } )
+
+# sync date input and changes to the dygraph range slider
+observeEvent(input$catchTS_date_window, {
+  start <- as.Date(ymd_hms(input$catchTS_date_window[[1]]))
+  stop  <- as.Date(ymd_hms(input$catchTS_date_window[[2]]))
+  updateDateRangeInput(session = session,
+                       inputId = "dateTS",
+                       start = start,end = stop
+                       )
+})
+
+update_range <- eventReactive(input$dateButton, {
+      range <- paste(input$dateTS[1], input$dateTS[2], sep = "/")
+      return(ts[range])
+    })
+
+# observeEvent(input$dateButton, {
+#   
+#     nwm <- readNWMdata(comid = comid)
+#     ts = xts::xts(as.data.frame(nwm <- nwm$flow_cms), order.by = nwm <- nwm$dateTime, tz= 'UTC')
+#       
+# 
+#     
+#     
+#     output$catchTS <- renderDygraph({
+# 
+#       dygraph(update_range)  %>%
+#         dyHighlight(highlightCircleSize = 2,
+#                 highlightSeriesBackgroundAlpha = .3) %>%
+#         dyOptions(colors = c("darkcyan"),
+#               fillGraph = TRUE) %>%
+#         dyRangeSelector(dateWindow = c(as.character(input$dateTS[1]), as.character(input$dateTS[2])))
+#     })
+#   
+# })
+
+observeEvent(input$catchMap_click, {
+    # pt <<- NULL
+    click <<- input$catchMap_click %>%
+      data.frame() %>%
+      dplyr::select(lat,lng)
+    print(click)
+    pt <- sf::st_as_sf(click,
+                        coords = c("lng", "lat"),
+                        crs = 4326)
+    nldi <- findNLDI(location = pt)
+    #
+    comid <- nldi$comid
+    nwm <- readNWMdata(comid = comid)
+    # output$catchTS      <- renderDygraph( {make_ts4(nwm) })
+
+    output$catchTS <- renderDygraph({
+    # timelimits<-reactiveValues(start=start(sample_xts),end=end(sample_xts))
+        # nwm <- readNWMdata(comid = comid)
+     #  
+     # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm <- nwm$dateTime, tz= 'UTC')
+
+        print("map1_click")
+        make_ts4(nwm)
+  })
+})
 
 
+# observeEvent(input$catchMap_click, {
+#   if(!is.null(input$dateButton)) {
+#     click <<- input$catchMap_click %>%
+#       data.frame() %>%
+#       dplyr::select(lat,lng)
+#     print(click)
+#     pt <- sf::st_as_sf(click,
+#                         coords = c("lng", "lat"),
+#                         crs = 4326)
+#     nldi <- findNLDI(location = pt)
+#   
+#     comid <- nldi$comid
+#     nwm <- readNWMdata(comid = comid)
+#     
+#     output$catchTS <- renderDygraph({
+#    
+#         nwm <- readNWMdata(comid = comid) 
+#         nwm2 <- head(nwm, 15)
+#         print(nwm2)
+#      
+#    
+#        ts2 <- xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+#         ts2[dateTSText()]
+#     
+#         dygraph(ts2)  %>% 
+#           dyHighlight(highlightCircleSize = 2,
+#                   highlightSeriesBackgroundAlpha = .3) %>%
+#           dyOptions(colors = c("darkcyan"),
+#                 fillGraph = TRUE) %>% 
+#           dyRangeSelector()
+#     })
+#   }
+# })
+```
 
 
 
