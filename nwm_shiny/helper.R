@@ -61,8 +61,42 @@ second_map <- function() {
 
 
 
+
+# census_api_key("e35e9a066fde271fb3779cceb453bebc82fa3498",overwrite=TRUE, install = TRUE)
+# Sys.getenv("CENSUS_API_KEY")
+# readRenviron("~/.Renviron")
+# 
+# pop <- get_acs(geography = "county",
+#                      variables = "B01003_001",
+#                      geometry = TRUE)
+# 
+# pop$area <- st_area(pop)
+# 
+# pop$area <- units::set_units(pop$area, "mi^2")
+# pop <- rename(pop, population = estimate)
+# pop <- pop %>% 
+#   mutate(pop_density = population/area)
+# 
+# pal <- colorQuantile(palette = "viridis", domain = pop$pop_density, n = 30)
+# 
+# pop %>%
+#   st_transform(crs = "+init=epsg:4326") %>%
+#   leaflet() %>%
+#   addProviderTiles(provider = "CartoDB.Positron") %>%
+#   addPolygons(stroke = FALSE,
+#               smoothFactor = 0,
+#               fillOpacity = 0.7,
+#               color = ~ pal(pop_density)) %>%
+#   addLegend("bottomright", 
+#             pal = pal, 
+#             values = ~ pop_density,
+#             title = "Population percentiles",
+#             opacity = 1)
+
+
+
 make_ts <- function(comid) {
-  nwm <- readNWMdata(comid = 101) %>% 
+  nwm <- readNWMdata(comid = comid) %>% 
     head(10000)
   ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   dygraph(ts)  %>% 
@@ -71,6 +105,8 @@ make_ts <- function(comid) {
     dyOptions(colors = c("darkcyan"),
               fillGraph = TRUE)
 }
+
+
 
 make_ts3 <- function(comid, startDate, endDate) {
 f = ts[NULL]

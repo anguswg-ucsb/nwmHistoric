@@ -18,6 +18,7 @@ library(shinycustomloader)
 library(dataRetrieval)
 library(nhdplusTools)
 library(nwmHistoric)
+library(tidycensus)
 
 library(lubridate)
 
@@ -28,6 +29,8 @@ library(dplyr)
 library(dygraphs)
 library(DT)
 library(formattable)
+
+
 
 source('../nwm_shiny/helper.R')
 ```
@@ -357,6 +360,7 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
     print(comid)
     
     output$catchDT <- renderDataTable({ make_table(comid) })
+    
     nwm <- readNWMdata(comid = comid)
     output$catchTS      <- renderDygraph( {make_ts4(nwm) })
 })
