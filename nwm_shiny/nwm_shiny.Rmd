@@ -39,8 +39,23 @@ source('../nwm_shiny/helper.R')
 #Initialize Maps 
 output$catchMap     <- renderLeaflet({ basemap() })
 output$catchMap_2     <- renderLeaflet({ second_map() })
+output$countyMap <- renderLeaflet({ pop_map(pop) })
 
 comid <<- reactiveValues(comid = NULL)
+# 
+# pop <<- get_acs(geography = "county",
+#                  variables = "B01003_001",
+#                  geometry = TRUE)
+#   
+#   pop$area <- st_area(pop)
+#   
+#   pop$area <- units::set_units(pop$area, "mi^2")
+#   pop <- rename(pop, population = estimate)
+#   pop <- pop %>%
+#     mutate(pop_density = population/area)
+#   pop <- pop %>% filter(!grepl("^02", GEOID))
+#   pop <- pop %>% filter(!grepl("^15", GEOID))
+#   pop <<- st_transform(pop, 4326)
 
 # get_nwm <- reactive({
 #   if(is.null(comid)) {
@@ -131,16 +146,16 @@ leafletOutput("catchMap")
 
 ```{r context = "server"}
 
-# 
-#  lat = 35.6643
-# lng = -96.91935
-# 
-#  pt <- data.frame(lat, lng)
-#    pt <- sf::st_as_sf(pt, 
-#                         coords = c("lng", "lat"), 
-#                         crs = 4326)
-#        nldi <- findNLDI(location = pt)
-#    
+
+ lat = 35.6643
+lng = -96.91935
+
+ pt <- data.frame(lat, lng)
+   pt <- sf::st_as_sf(pt,
+                        coords = c("lng", "lat"),
+                        crs = 4326)
+       nldi <- findNLDI(location = pt)
+
    
   
 
@@ -160,6 +175,27 @@ leafletOutput("catchMap")
     
     print(comid)
     print("map1_click2")
+    # 
+    # catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    
+    bb <- st_bbox(nldi) # current bounding box
+    
+    # bounding box range
+    xrange <- bb$xmax - bb$xmin # range of x values
+    yrange <- bb$ymax - bb$ymin # range of y values
+    
+    # expand bb by 60% 
+    bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
+    bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
+    bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
+    bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
+
+    # make bb a sfc
+    bb <- bb %>%  # take the bounding box ...
+        st_as_sfc() 
+    
+    catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
+   
     
     output$comidBox <- renderValueBox({
     valueBox(value = paste("COMID: ", comid),
@@ -169,13 +205,13 @@ leafletOutput("catchMap")
     valueBox(value = paste("COMID: ", comid),
       icon = "fa-id-badge",
       color = "primary") })
-    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+
     leafletProxy("catchMap") %>% 
       clearMarkers() %>%
       clearShapes() %>% 
-      addMarkers(data = pt) %>% 
+      addMarkers(data = pt,
+                 layerId = ~comid,) %>% 
       addPolygons( data = catch_df,
-                   layerId = ~comid,
                    col = 'blue') 
       # zoom_to_catch(catch_df, comid)
     
@@ -291,47 +327,48 @@ leafletOutput("countyMap")
 ```
 
 ```{r context = "server"}
-pop <- get_acs(geography = "county",
-                     variables = "B01003_001",
-                     geometry = TRUE)
-
-pop$area <- st_area(pop)
-
-pop$area <- units::set_units(pop$area, "mi^2")
-pop <- rename(pop, population = estimate)
-pop <- pop %>%
-  mutate(pop_density = population/area)
-pop <- pop %>% filter(!grepl("^02", GEOID))
-pop <- pop %>% filter(!grepl("^15", GEOID))
-pop <- st_transform(pop, 4326)
-
-pal <- colorQuantile(palette = "viridis", domain = pop$pop_density, n = 10)
+# pop <- get_acs(geography = "county",
+#                      variables = "B01003_001",
+#                      geometry = TRUE)
+# 
+# pop$area <- st_area(pop)
+# 
+# pop$area <- units::set_units(pop$area, "mi^2")
+# pop <- rename(pop, population = estimate)
+# pop <- pop %>%
+#   mutate(pop_density = population/area)
+# pop <- pop %>% filter(!grepl("^02", GEOID))
+# pop <- pop %>% filter(!grepl("^15", GEOID))
+# pop <- st_transform(pop, 4326)
+# 
+# pal <- colorQuantile(palette = "viridis", domain = pop$pop_density, n = 10)
 #intersect clicked catchment with county polygons
 
-output$countyMap <- renderLeaflet()
 
-  observeEvent(input$catchMap_3_click , {
-    click <<- input$catchMap_3_click %>% 
-            data.frame() %>% 
-            dplyr::select(lat,lng)
-    
-          print(click)
-    pt <- sf::st_as_sf(click, 
-                        coords = c("lng", "lat"), 
-                        crs = 4326)
-  
-  
-    nldi <- findNLDI(location = pt) %>% 
-          st_transform(5070)
-
-    buff <- st_buffer(nldi, 50000) %>% 
-          st_transform(4326)
-    overlap_counties <- st_filter(pop, buff, .predicate = st_intersects)
-    
-    output$countyMap <- renderLeaflet()
-
-
-}
+# 
+#   observeEvent(input$catchMap_3_click , {
+#     click <<- input$catchMap_3_click %>% 
+#             data.frame() %>% 
+#             dplyr::select(lat,lng)
+#     
+#           print(click)
+#     pt <- sf::st_as_sf(click, 
+#                         coords = c("lng", "lat"), 
+#                         crs = 4326)
+#   
+#   
+#     nldi <- findNLDI(comid = comid)
+#    
+#     nldi <- st_transform(nldi, 5070)
+# 
+#     buff <- st_buffer(nldi, 50000) %>% 
+#           st_transform(4326)
+#     overlap_counties <- st_filter(pop, buff, .predicate = st_intersects)
+#     
+#     output$countyMap <- renderLeaflet({ pop_map(overlap_counties) })
+# 
+# 
+# })
 
 
 
@@ -378,8 +415,27 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
     
     print("map3_click1")
     # output$areaTable <- renderText({ make_table2(comid) })
-    # 
-    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    # # 
+    # catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    
+    bb <- st_bbox(nldi) # current bounding box
+    
+    # bounding box range
+    xrange <- bb$xmax - bb$xmin # range of x values
+    yrange <- bb$ymax - bb$ymin # range of y values
+    
+    # expand bb by 60% 
+    bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
+    bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
+    bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
+    bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
+
+    # make bb a sfc
+    bb <- bb %>%  # take the bounding box ...
+        st_as_sfc() 
+    
+    catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
+  
     leafletProxy("catchMap_3") %>% 
       clearMarkers() %>%
       clearShapes() %>% 

@@ -65,15 +65,30 @@ second_map <- function() {
 # census_api_key("e35e9a066fde271fb3779cceb453bebc82fa3498",overwrite=TRUE, install = TRUE)
 # Sys.getenv("CENSUS_API_KEY")
 # readRenviron("~/.Renviron")
-pop_map <- function() {
+pop_map <- function(pop_df) {
+  pop <- get_acs(geography = "county",
+                 variables = "B01003_001",
+                 geometry = TRUE)
   
-  leaflet(data = overlap) %>%
+  pop$area <- st_area(pop)
+  
+  pop$area <- units::set_units(pop$area, "mi^2")
+  pop <- rename(pop, population = estimate)
+  pop <- pop %>%
+    mutate(pop_density = population/area)
+  pop <- pop %>% filter(!grepl("^02", GEOID))
+  pop <- pop %>% filter(!grepl("^15", GEOID))
+  pop <- st_transform(pop, 4326)
+  
+  pal <- colorQuantile(palette = "viridis", domain = pop$pop_density, n = 10)
+  pal <- colorQuantile(palette = "viridis", domain = pop$pop_density, n = 10)
+  leaflet(data = pop_df) %>%
     addProviderTiles(provider = "CartoDB.Positron") %>%
     addPolygons(stroke = TRUE,
-                weight = 3,
+                weight = 0.3,
                 smoothFactor = 0,
                 fillOpacity = 0.6,
-                color = ~ pal(pop_density)) %>%
+                color = ~ RColorBrewer::pal(pop_density)) %>%
     addLegend("bottomright",
                 pal = pal,
                 values = ~ pop_density,
@@ -81,6 +96,8 @@ pop_map <- function() {
                 opacity = 1) %>%
     leafem::addMouseCoordinates()
 }
+
+
 # pop <- get_acs(geography = "county",
 #                      variables = "B01003_001",
 #                      geometry = TRUE)
