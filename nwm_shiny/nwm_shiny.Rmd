@@ -1,6 +1,6 @@
 ---
 title: "NWM"
-runtime: shiny_prerendered
+runtime: shiny
 output: 
   flexdashboard::flex_dashboard:
     navbar:
@@ -130,6 +130,19 @@ leafletOutput("catchMap")
 ```
 
 ```{r context = "server"}
+
+# 
+#  lat = 35.6643
+# lng = -96.91935
+# 
+#  pt <- data.frame(lat, lng)
+#    pt <- sf::st_as_sf(pt, 
+#                         coords = c("lng", "lat"), 
+#                         crs = 4326)
+#        nldi <- findNLDI(location = pt)
+#    
+   
+  
 
 # Clicking on map 1 outputs Value boxes on both pages + catchment polygons + Dat table + info panel
   observeEvent(input$catchMap_click, {
@@ -272,6 +285,59 @@ valueBoxOutput("comidBox2")
 dataTableOutput("catchDT")
 ```
 
+### Population density
+```{r}
+leafletOutput("countyMap")
+```
+
+```{r context = "server"}
+pop <- get_acs(geography = "county",
+                     variables = "B01003_001",
+                     geometry = TRUE)
+
+pop$area <- st_area(pop)
+
+pop$area <- units::set_units(pop$area, "mi^2")
+pop <- rename(pop, population = estimate)
+pop <- pop %>%
+  mutate(pop_density = population/area)
+pop <- pop %>% filter(!grepl("^02", GEOID))
+pop <- pop %>% filter(!grepl("^15", GEOID))
+pop <- st_transform(pop, 4326)
+
+pal <- colorQuantile(palette = "viridis", domain = pop$pop_density, n = 10)
+#intersect clicked catchment with county polygons
+
+output$countyMap <- renderLeaflet()
+
+  observeEvent(input$catchMap_3_click , {
+    click <<- input$catchMap_3_click %>% 
+            data.frame() %>% 
+            dplyr::select(lat,lng)
+    
+          print(click)
+    pt <- sf::st_as_sf(click, 
+                        coords = c("lng", "lat"), 
+                        crs = 4326)
+  
+  
+    nldi <- findNLDI(location = pt) %>% 
+          st_transform(5070)
+
+    buff <- st_buffer(nldi, 50000) %>% 
+          st_transform(4326)
+    overlap_counties <- st_filter(pop, buff, .predicate = st_intersects)
+    
+    output$countyMap <- renderLeaflet()
+
+
+}
+
+
+
+```
+
+
 Column {data-width=800}
 -----------------------------------------------------------------------
 ### Map 3
@@ -299,7 +365,7 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
     comid = nldi$comid
     
     print(comid)
-    # output$catchTS <- renderDygraph({ make_ts(pt) })
+    output$catchTS <- renderDygraph({ make_ts(pt) })
 
     output$comidBox2 <- renderValueBox({
       valueBox(value = paste("COMID: ", comid),
@@ -344,27 +410,46 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
 # Clicking map 3, outputs data table on page 2 + Timeseries on page 1
   observeEvent(input$catchMap_3_click, {
     # pt <<- NULL
-    click <<- input$catchMap_3_click %>% 
-      data.frame() %>% 
+    click <<- input$catchMap_3_click %>%
+      data.frame() %>%
       dplyr::select(lat,lng)
-    
+
     print(click)
-    pt <- sf::st_as_sf(click, 
-                        coords = c("lng", "lat"), 
+    pt <- sf::st_as_sf(click,
+                        coords = c("lng", "lat"),
                         crs = 4326)
-  
-  
+
+
     nldi <- findNLDI(location = pt)
-    
+
     comid = nldi$comid
     print(comid)
-    
+
     output$catchDT <- renderDataTable({ make_table(comid) })
-    
+
     nwm <- readNWMdata(comid = comid)
     output$catchTS      <- renderDygraph( {make_ts4(nwm) })
 })
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

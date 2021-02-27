@@ -60,12 +60,27 @@ second_map <- function() {
 
 
 
-
-
+#
+# US census API key
 # census_api_key("e35e9a066fde271fb3779cceb453bebc82fa3498",overwrite=TRUE, install = TRUE)
 # Sys.getenv("CENSUS_API_KEY")
 # readRenviron("~/.Renviron")
-# 
+pop_map <- function() {
+  
+  leaflet(data = overlap) %>%
+    addProviderTiles(provider = "CartoDB.Positron") %>%
+    addPolygons(stroke = TRUE,
+                weight = 3,
+                smoothFactor = 0,
+                fillOpacity = 0.6,
+                color = ~ pal(pop_density)) %>%
+    addLegend("bottomright",
+                pal = pal,
+                values = ~ pop_density,
+                title = "Population percentiles",
+                opacity = 1) %>%
+    leafem::addMouseCoordinates()
+}
 # pop <- get_acs(geography = "county",
 #                      variables = "B01003_001",
 #                      geometry = TRUE)
@@ -74,24 +89,21 @@ second_map <- function() {
 # 
 # pop$area <- units::set_units(pop$area, "mi^2")
 # pop <- rename(pop, population = estimate)
-# pop <- pop %>% 
+# pop <- pop %>%
 #   mutate(pop_density = population/area)
+# pop <- pop %>% filter(!grepl("^02", GEOID))
+# pop <- pop %>% filter(!grepl("^15", GEOID))
+# pop <- st_transform(pop, 4326)
 # 
-# pal <- colorQuantile(palette = "viridis", domain = pop$pop_density, n = 30)
+# #intersect clicked catchment with county polygons
+# nldi <- findNLDI(location = pt) %>% 
+#   st_transform(5070)
+# buff <- st_buffer(nldi, 50000) %>% 
+#   st_transform(4326)
+# overlap_counties <- st_filter(pop, buff, .predicate = st_intersects)
 # 
-# pop %>%
-#   st_transform(crs = "+init=epsg:4326") %>%
-#   leaflet() %>%
-#   addProviderTiles(provider = "CartoDB.Positron") %>%
-#   addPolygons(stroke = FALSE,
-#               smoothFactor = 0,
-#               fillOpacity = 0.7,
-#               color = ~ pal(pop_density)) %>%
-#   addLegend("bottomright", 
-#             pal = pal, 
-#             values = ~ pop_density,
-#             title = "Population percentiles",
-#             opacity = 1)
+# # Pop density leaflet
+# pal <- colorQuantile(palette = "viridis", domain = pop$pop_density, n = 10)
 
 
 
