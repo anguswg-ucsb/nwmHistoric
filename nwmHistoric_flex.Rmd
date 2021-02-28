@@ -106,35 +106,55 @@ shiny::actionButton("dateButton", label = "Enter", icon("search"))
 ```
 
 ```{r context = "server"}
-observeEvent(input$catchTS_date_window, {
-  start <- as.Date(ymd_hms(input$catchTS_date_window[[1]]))
-  stop  <- as.Date(ymd_hms(input$catchTS_date_window[[2]]))
-  updateDateRangeInput(session = session,
+  r <- reactiveValues(
+    change_datewindow = 0,
+    change_dateTS = 0,
+    change_datewindow_auto = 0,
+    change_dateTS_auto = 0,
+    dateTS = c(start = "1993-01-01",
+               end = "2018-12-31")
+  )
+
+
+  observeEvent(input$catchTS_date_window, {
+    message(crayon::blue("observeEvent_input_catchTS_date_window"))
+    r$change_datewindow <- r$change_datewindow + 1
+    if (r$change_datewindow > r$change_datewindow_auto) {
+
+      r$change_dateTS_auto <- r$change_dateTS_auto + 1
+      r$change_datewindow_auto <- r$change_datewindow
+
+    start <- as.Date(ymd_hms(input$catchTS_date_window[[1]]))
+    stop  <- as.Date(ymd_hms(input$catchTS_date_window[[2]]))
+   updateDateRangeInput(session = session,
                        inputId = "dateTS",
                        start = start,end = stop
                        )
-})
-
-
-# testing reactivity with date range input & button
-dateTSText <- eventReactive(input$dateButton, {
-  paste0("'", as.character(input$dateTS[1]), "/", as.character(input$dateTS[2]), "'")
- 
+      
+    } else {
+      if (r$change_datewindow >= 10) {
+        r$change_datewindow_auto <- r$change_datewindow <- 0
+      }
+    }
   })
-  
-  output$dateTSText <- renderText({
-   dateTSText()
-  })
-  
- dateTSText2 <- eventReactive(input$dateButton, {
-      range <- paste(input$dateTS[1], input$dateTS[2], sep = "/")
-      print(range)
-    })
 
-  output$dateTSText2 <- renderText({
-   dateTSText2()
+  observeEvent(input$dateTS, {
+    message("observeEvent_input_dateTS")
+    r$change_dateTS <- r$change_dateTS + 1
+    if (r$change_dateTS > r$change_dateTS_auto) {
+      message("event input_year update")
+
+      r$change_datewindow_auto <- r$change_datewindow_auto + 1
+      r$change_dateTS_auto <- r$change_dateTS
+
+      r$dateTS <- input$dateTS
+
+    } else {
+      if (r$change_dateTS >= 10) {
+        r$change_dateTS_auto <- r$change_dateTS <- 0
+      }
+    }
   })
-  
   observeEvent(input$catchMap_click, {
     
     click <<- input$catchMap_click %>%
@@ -149,8 +169,6 @@ dateTSText <- eventReactive(input$dateButton, {
     nwm <- readNWMdata(comid = comid)
     ts = xts::xts(as.data.frame(nwm$flow_cms), order.by =nwm$dateTime, tz= 'UTC')
     
-    # if(!is.null(input$dateButton)) {
-  
       output$catchTS <- renderDygraph({
         print("date change button")
         dygraph(ts)  %>%
@@ -158,15 +176,35 @@ dateTSText <- eventReactive(input$dateButton, {
                 highlightSeriesBackgroundAlpha = .3) %>%
           dyOptions(colors = c("darkcyan"),
               fillGraph = TRUE) %>%
-          dyRangeSelector(dateWindow = c(as.character(input$dateTS[1]),
-                                         as.character(input$dateTS[2])))
+          dyRangeSelector(dateWindow = c(as.character(r$dateTS[1] + 1),
+                                         as.character(r$dateTS[2] + 1)))
       })
-  # }  else {
-  #      output$catchTS <- renderDygraph({
-  #       print("map1_click")
-  #       make_ts4(ts)
-  #      })
-  # }   
+})
+
+  observeEvent(input$catchMap_click, {
+    
+    click <<- input$catchMap_click %>%
+      data.frame() %>%
+      dplyr::select(lat,lng)
+    print(click)
+    pt <- sf::st_as_sf(click,
+                        coords = c("lng", "lat"),
+                        crs = 4326)
+    nldi <- findNLDI(location = pt)
+    comid <- nldi$comid
+    nwm <- readNWMdata(comid = comid)
+    ts = xts::xts(as.data.frame(nwm$flow_cms), order.by =nwm$dateTime, tz= 'UTC')
+    
+      output$catchTS <- renderDygraph({
+        print("date change button")
+        dygraph(ts)  %>%
+          dyHighlight(highlightCircleSize = 2,
+                highlightSeriesBackgroundAlpha = .3) %>%
+          dyOptions(colors = c("darkcyan"),
+              fillGraph = TRUE) %>%
+          dyRangeSelector(dateWindow = c(as.character(r$dateTS[1] + 1),
+                                         as.character(r$dateTS[2] + 1)))
+      })
 })
   
   
