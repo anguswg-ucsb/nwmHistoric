@@ -39,7 +39,7 @@ source('../nwm_shiny/helper.R')
 #Initialize Maps 
 output$catchMap     <- renderLeaflet({ basemap() })
 output$catchMap_2     <- renderLeaflet({ second_map() })
-output$countyMap <- renderLeaflet({ pop_map(pop) })
+# output$countyMap <- renderLeaflet({ pop_map(pop) })
 
 # comid <<- reactiveValues(comid = NULL)
 
@@ -76,19 +76,19 @@ shiny::actionButton("dateButton", label = "Enter", icon("search"))
 ```
 
 ```{r context = "server"}
-observeEvent(input$catchTS_date_window, {
-  start <- as.Date(ymd_hms(input$catchTS_date_window[[1]]))
-  stop  <- as.Date(ymd_hms(input$catchTS_date_window[[2]]))
-  updateDateRangeInput(session = session,
-                       inputId = "dateTS",
-                       start = start,end = stop
-                       )
-})
+# observeEvent(input$catchTS_date_window, {
+#   start <- as.Date(ymd_hms(input$catchTS_date_window[[1]]))
+#   stop  <- as.Date(ymd_hms(input$catchTS_date_window[[2]]))
+#   updateDateRangeInput(session = session,
+#                        inputId = "dateTS",
+#                        start = start,end = stop
+#                        )
+# })
 
-update_range <- eventReactive(input$dateButton, {
-      range <- paste(input$dateTS[1], input$dateTS[2], sep = "/")
-      return(ts[range])
-    })
+# update_range <- eventReactive(input$dateButton, {
+#       range <- paste(input$dateTS[1], input$dateTS[2], sep = "/")
+#       return(ts[range])
+#     })
 
 # observeEvent(input$dateButton, {
 #   
@@ -173,6 +173,8 @@ leafletOutput("catchMap")
     bb <- bb %>%  # take the bounding box ...
         st_as_sfc() 
     catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
+    catch_df2 <- catch_df %>% 
+      filter(featureid == comid)
     
     output$comidBox <- renderValueBox({
     valueBox(value = paste("COMID: ", comid),
@@ -189,25 +191,29 @@ leafletOutput("catchMap")
       clearShapes() %>% 
       addMarkers(data = pt,
                  layerId = ~comid,) %>% 
+      addPolygons( data = catch_df2,
+                   col = 'red') %>% 
       addPolygons( data = catch_df,
-                   col = 'blue') 
+                   col = 'yellow')
       # zoom_to_catch(catch_df, comid)
-    
     leafletProxy("catchMap_2") %>%
       clearMarkers() %>%
       clearShapes() %>%
       addMarkers(data = pt,
                  layerId = ~comid) %>%
+      addPolygons( data = catch_df2,
+                   col = 'red') %>% 
       addPolygons( data = catch_df,
-                   col = 'blue')
+                   col = 'yellow')
     
     leafletProxy("catchMap_3") %>% 
       clearMarkers() %>%
       clearShapes() %>% 
       addMarkers(data = pt) %>% 
+      addPolygons( data = catch_df2,
+                   col = 'red') %>% 
       addPolygons( data = catch_df,
-                   layerId = ~comid,
-                   col = 'blue')
+                   col = 'yellow')
   
     output$areaTable <- renderText ({ make_table2(comid) })
     output$catchDT <- renderDataTable({ make_table(comid) })
@@ -361,49 +367,6 @@ dateTSText2 <- eventReactive(input$dateButton, {
                                          as.character(r$dateTS[2] + 1)))
       })
 })
-  # }  else {
-  #      output$catchTS <- renderDygraph({
-  #       print("map1_click")
-  #       make_ts4(ts)
-  #      })
-  # }   
-# 
-# observeEvent(input$catchMap_click, {
-#     click <<- input$catchMap_click %>%
-#       data.frame() %>%
-#       dplyr::select(lat,lng)
-#     print(click)
-#     pt <- sf::st_as_sf(click,
-#                         coords = c("lng", "lat"),
-#                         crs = 4326)
-#     nldi <- findNLDI(location = pt)
-#     comid <- nldi$comid
-#     nwm <- readNWMdata(comid = comid)
-#     ts = xts::xts(as.data.frame(nwm$flow_cms), order.by =nwm$dateTime, tz= 'UTC')
-#     
-#     # if(!is.null(input$dateButton)) {
-#       output$catchTS <- renderDygraph({
-#         if(is.null(input$dateButton)) {
-#           keep_range <<- FALSE
-#           return(NULL)
-#         }
-#         else {
-#         print("date change button")
-#         dygraph(ts)  %>%
-#           dyHighlight(highlightCircleSize = 2,
-#                 highlightSeriesBackgroundAlpha = .3) %>%
-#           dyOptions(colors = c("darkcyan"),
-#               fillGraph = TRUE) %>%
-#           dyRangeSelector(dateWindow = c(as.character(input$dateTS[1]),
-#                                          as.character(input$dateTS[2])))
-#       })
-#   # }  else {
-#   #      output$catchTS <- renderDygraph({
-#   #       print("map1_click")
-#   #       make_ts4(ts)
-#   #      })
-#   # }   
-# })
 ```
 
 Data Table {data-orientation=columns data-icon="fa-filter"}
@@ -481,7 +444,7 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
     pt <- sf::st_as_sf(click, 
                         coords = c("lng", "lat"), 
                         crs = 4326)
-    nldi <- findNLDI(location = pt)
+    nldi <- findNLDI(comid = 101)
     comid = nldi$comid
     print(comid)
     
@@ -518,11 +481,16 @@ output$catchMap_3 <- renderLeaflet({ basemap() })
         st_as_sfc() 
     
     catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
+    catch_df2 <- catch_df %>% 
+      filter(featureid == comid)
   
     leafletProxy("catchMap_3") %>% 
       clearMarkers() %>%
       clearShapes() %>% 
-      addMarkers(data = pt) %>% 
+      addMarkers(data = pt) %>%
+      addPolygons( data = catch_df2,
+                   layerId = ~comid,
+                   col = 'red') %>% 
       addPolygons( data = catch_df,
                    layerId = ~comid,
                    col = 'blue')

@@ -28,16 +28,20 @@ make_ts2 <- function(comid) {
 basemap <- function() {
   # pal = colorNumeric("inferno", reverse= TRUE, domain = today$size, n = 50)
   # pal2 <- colorNumeric("inferno", reverse = TRUE, domain = today$cases, n = 50)
-leaflet() %>%
-    addProviderTiles(providers$CartoDB.Positron) %>%
-    addScaleBar("bottomleft") %>% 
-    setView(-95,40,4) %>% 
+  
+  leaflet() %>%
+    addProviderTiles(providers$Stamen.Terrain, group = "Topographic") %>%
+    addProviderTiles(providers$Stamen.TopOSMRelief, group = "Relief") %>%
+    addLayersControl(options = layersControlOptions(collapsed = FALSE),
+                     baseGroups = c('Topographic', "Relief")) %>% 
+    addScaleBar("bottomleft") %>%
+    setView(-95,40,4) %>%
     addMeasure(
       position = "bottomleft",
       primaryLengthUnit = "feet",
       primaryAreaUnit = "sqmiles",
       activeColor = "red",
-      completedColor = "green" ) %>% 
+      completedColor = "green" ) %>%
     leafem::addMouseCoordinates()
 }
 
