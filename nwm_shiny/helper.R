@@ -159,9 +159,9 @@ f = ts[NULL]
 
 
 
-make_ts4 <- function(nwm) {
-  nwm <- nwm 
-  ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+make_ts4 <- function(ts) {
+  # nwm <- nwm 
+  # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   dygraph(ts)  %>% 
     dyHighlight(highlightCircleSize = 2,
                 highlightSeriesBackgroundAlpha = .3) %>%
