@@ -17,6 +17,48 @@
 # library(formattable)
 
 
+# USGS Water use data
+water_use <- dataRetrieval::readNWISuse(stateCd = "CA", countyCd = "Contra Costa") %>% 
+  janitor::clean_names()
+
+water_use <- water_use %>% 
+  select(1:6, contains("total_self_supplied_withdrawals_surface_water"), contains("surface_water_withdrawals_for_golf"))
+
+water_use <- water_use %>% 
+  mutate(across(5:22, as.numeric)) %>% 
+  replace(is.na(.), 0)
+
+water_use <- water_use %>% 
+  rename(statefips = state_cd,
+         countyfips = county_cd,
+         pop = total_population_total_population_of_area_in_thousands,
+         livestock1 = livestock_stock_total_self_supplied_withdrawals_surface_water_in_mgal_d,
+         livestock2 = livestock_animal_specialties_total_self_supplied_withdrawals_surface_water_in_mgal_d,
+         therm1 = thermoelectric_power_closed_loop_cooling_total_self_supplied_withdrawals_surface_water_in_mgal_d,
+         therm2 = thermoelectric_power_once_through_cooling_total_self_supplied_withdrawals_surface_water_in_mgal,
+         aquacultere1 = aquaculture_total_self_supplied_withdrawals_surface_water_in_mgal_d, 
+         irrigation1 = irrigation_total_total_self_supplied_withdrawals_surface_water_in_mgal_d,
+         irrigation2 = irrigation_golf_courses_self_supplied_surface_water_withdrawals_for_golf_courses_fresh_in_mgal_d) 
+
+for ( col in 1:ncol(water_use)){
+  colnames(water_use)[col] <-  sub("_.*", "", colnames(water_use)[col])
+}
+
+water_use <- water_use %>% 
+  mutate(public_supply = public + domestic,
+         thermoelectric = total,
+         irrigation = livestock1 + livestock2 + aquacultere1 + irrigation1 + irrigation2) %>% 
+  select(1:6, public_supply, irrigation, industrial, mining,  thermoelectric)
+
+water_use <- water_use %>% 
+  tidyr::unite('fips', statefips, countyfips) 
+
+water_use$fips <- gsub("_", "", water_use$fips)
+water_use$fips <- as.numeric(water_use$fips)
+
+
+
+
 make_ts2 <- function(comid) {
   nwm <- readNWMdata(comid = comid)
   plotly::plot_ly(
@@ -30,8 +72,8 @@ basemap <- function() {
   # pal2 <- colorNumeric("inferno", reverse = TRUE, domain = today$cases, n = 50)
   
   leaflet() %>%
-    addProviderTiles(providers$Stamen.Terrain, group = "Topographic") %>%
-    addProviderTiles(providers$Stamen.TopOSMRelief, group = "Relief") %>%
+    addProviderTiles(providers$OpenStreetMap, group = "Topographic") %>%
+    addProviderTiles(providers$Esri.WorldShadedRelief, group = "Relief") %>%
     addLayersControl(options = layersControlOptions(collapsed = FALSE),
                      baseGroups = c('Topographic', "Relief")) %>% 
     addScaleBar("bottomleft") %>%
