@@ -17,6 +17,56 @@
 # library(formattable)
 
 
+
+
+library(climateR)
+
+
+#### TEST POINT ####
+lat = 35.6643
+lng = -96.91935
+pt <- data.frame(lat, lng)
+pt <- sf::st_as_sf(pt,
+                   coords = c("lng", "lat"),
+                   crs = 4326)
+nldi <- findNLDI(location = pt)
+centroid <- st_centroid(nldi)
+
+tmp1 <- AOI::(centroid)
+param_meta$terraclim
+mapview::mapview(centroid)
+
+srad = getGridMET(AOI::geocode("UCSB", pt = TRUE), 
+                  param = "srad", 
+                  startDate = "2020-01-01", 
+                  endDate = "2020-10-01")
+
+precip <- climateR::getTerraClim(AOI = centroid, param = "prcp",
+                       startDate = "1993-01-01", 
+                       endDate = "2014-12-31")
+
+evapot <- climateR::getTerraClim(AOI = centroid, param = "aet",
+                                 startDate = "1993-01-01", 
+                                 endDate = "2014-12-31")
+
+srad <- climateR::getTerraClim(AOI = centroid, param = "srad",
+                                 startDate = "1993-01-01", 
+                                 endDate = "2014-12-31")
+
+highchart() %>%  
+  hc_add_series(evapot, hcaes(x = date, y = aet), type = "line") %>%
+  hc_add_series(precip,hcaes(x = date, y = precip), type = "column")
+
+ hchart(type = "line", hcaes(x = date, y = aet)) %>%
+  hc_colors(c("darkcyan")) %>% 
+  hc_add_series(data = precip) %>% 
+  hc_colors(c("red"))
+  # stat_smooth(col = "red") + 
+  # theme_linedraw() + 
+  # scale_color_viridis_c()
+
+#
+#####################
 # USGS Water use data
 water_use_data <- function(state, county) {
   water_use <- dataRetrieval::readNWISuse(stateCd = state, countyCd = county) %>%
@@ -55,14 +105,6 @@ water_use_data <- function(state, county) {
     tidyr::pivot_longer(6:10, names_to = "sector", values_to = "withdrawals")
   water_use <- group_by(water_use, sector, year)
 }
-
-# catch_df <- get_nhdplus(comid = 101, realization = "catchment")
-# conus <- USAboundaries::us_counties() %>% 
-#   select(name, state_name)
-# tmp1 <- st_intersection(catch_df, conus) %>% 
-#   st_drop_geometry() %>% 
-#   slice(n =1)
-# plk = water_use_data(tmp1$state_name, tmp1$name)
 
 
 
@@ -178,9 +220,8 @@ pop_map <- function(pop_df) {
 
 
 make_ts <- function(comid) {
-  nwm <- readNWMdata(comid = comid) %>% 
-    head(10000)
-  ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
+  # nwm <- readNWMdata(comid = comid) 
+  # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   dygraph(ts)  %>% 
   dyHighlight(highlightCircleSize = 2,
               highlightSeriesBackgroundAlpha = .3) %>%
@@ -188,31 +229,7 @@ make_ts <- function(comid) {
               fillGraph = TRUE)
 }
 
-
-
-make_ts3 <- function(comid, startDate, endDate) {
-f = ts[NULL]
-  nwm <- readNWMdata(comid = comid, startDate = NULL, endDate = NULL)
-    ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
-    dygraph(ts)  %>% 
-    dyHighlight(highlightCircleSize = 2,
-                highlightSeriesBackgroundAlpha = .3) %>%
-    dyOptions(colors = c("darkcyan"),
-              fillGraph = TRUE)
-
-    # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
-    # dygraph(ts)  %>% 
-    #   dyHighlight(highlightCircleSize = 2,
-    #             highlightSeriesBackgroundAlpha = .3) %>%
-    #   dyOptions(colors = c("darkcyan"),
-    #           fillGraph = TRUE)
-  
-}
-
-
-
-
-make_ts4 <- function(ts) {
+make_ts2 <- function(ts) {
   # nwm <- nwm 
   # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
   dygraph(ts)  %>% 
@@ -221,97 +238,34 @@ make_ts4 <- function(ts) {
     dyOptions(colors = c("darkcyan"),
               fillGraph = TRUE) %>% 
     dyRangeSelector()
-  
-  #if(is.null(range)) {
-  # nwm <- nwm %>% 
-  #   head(10000)
-  # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
-  # dygraph(ts)  %>% 
-  #   dyHighlight(highlightCircleSize = 2,
-  #               highlightSeriesBackgroundAlpha = .3) %>%
-  #   dyOptions(colors = c("darkcyan"),
-  #             fillGraph = TRUE) %>% 
-  #   dyRangeSelector()
-  # } else {
-  # nwm <- nwm %>% 
-  #   head(10000)
-  # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
-  # ts2 <- ts[as.character(range)]
-  # dygraph(ts2)  %>% 
-  #   dyHighlight(highlightCircleSize = 2,
-  #               highlightSeriesBackgroundAlpha = .3) %>%
-  #   dyOptions(colors = c("darkcyan"),
-  #             fillGraph = TRUE) %>% 
-  #   dyRangeSelector()
-}
-
-  # ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
-  # dygraph(ts)  %>% 
-  #   dyHighlight(highlightCircleSize = 2,
-  #             highlightSeriesBackgroundAlpha = .3) %>%
-  #   dyOptions(colors = c("darkcyan"),
-  #           fillGraph = TRUE)
-make_ts6 <- function(nwm, date) {
-  nwm <- readNWMdata(comid = 101)
-  ts = xts::xts(as.data.frame(nwm$flow_cms), order.by = nwm$dateTime, tz= 'UTC')
-
-  dygraph(ts)  %>% 
-    dyHighlight(highlightCircleSize = 2,
-                highlightSeriesBackgroundAlpha = .3) %>%
-    dyOptions(colors = c("darkcyan"),
-              fillGraph = TRUE) %>% 
-    dyRangeSelector(dateWindow = c(1996-01-01, 1995-6-12))
-}
-# make_ts6(nwm, date = '1996-01-01/1996-6-12')
-# make_ts6(nwm, date = NULL)
-make_ts5 <- function(ts) {
-    ts <- ts
-    dygraph(ts)  %>% 
-      dyHighlight(highlightCircleSize = 2,
-                  highlightSeriesBackgroundAlpha = .3) %>%
-      dyOptions(colors = c("darkcyan"),
-                fillGraph = TRUE) %>% 
-      dyRangeSelector()
 }
 
 make_table <- function(comid) {
   nwm <- readNWMdata(comid = comid)
-  
-  
   nwm$flow_cms <- round(nwm$flow_cms, 2)
-  
   nwm <- head(nwm, 300)
-  
   nwm <- rename(nwm, Date = "dateTime",
                 "Flow rate (C/m/s)" = "flow_cms",
                 COMID = comid,
                 Model = model)
-  
   as.datatable(formattable(nwm, align = c("l", rep("r", NCOL(nwm) - 1)),
-                                        list(`Model` = formatter("span", style = ~ style(font.weight = "bold")),
-                                             # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
-                                             `COMID` = color_bar("honeydew"),
-                                             
-                                             `Date` = formatter("span", style = ~ style(font.weight = "bold")),
-                                             `Flow rate (C/m/s)` = color_tile("azure1", "cadetblue4"))),
+                      list(`Model` = formatter("span", style = ~ style(font.weight = "bold")),
+                           # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
+                           `COMID` = color_bar("honeydew"),
+                           `Date` = formatter("span", style = ~ style(font.weight = "bold")),
+                           `Flow rate (C/m/s)` = color_tile("azure1", "cadetblue4"))),
                options = list(paging = TRUE, searching = TRUE))
 
 }
-# agg <- nwmHistoric::aggregate_ym(nwm)
-# hchart(agg, type = "column", hcaes(x = ym, y = flow_cms)) %>%
-#   hc_colors(c("red", "green", "blue", "grey", "orange"))
+
 
 
 make_table2 <- function(comid) {
-  
   catch_df <- get_nhdplus(comid = comid, realization = "catchment")
-
   conus <- USAboundaries::us_counties() %>% 
     select(name, state_name)
-
   tmp1 <- st_intersection(catch_df, conus) %>% 
     st_drop_geometry()
-  
   tmp1$areasqkm <- round(tmp1$areasqkm, 2)
   
   tmp1 <- tmp1 %>% 
@@ -323,7 +277,6 @@ make_table2 <- function(comid) {
     mutate(across(1:4, as.character)) %>% 
     tidyr::pivot_longer(1:4, names_to = " ", values_to = "  ")
 
-  
   knitr::kable(tmp1, col.names = c('', " "), booktabs= T,
       table.attr ='class="table" style="color: black"', escape = F, align = "c") %>%
     kableExtra::kable_classic("striped") %>% 
@@ -335,43 +288,44 @@ make_table2 <- function(comid) {
   
 }
   
-# as.datatable(formattable(tmp1, align = c("l", rep("r", NCOL(nwm) - 1)),
-#                          list(`Model` = formatter("span", style = ~ style(font.weight = "bold")),
-#                               # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
-#                               `COMID` = color_bar("honeydew"),
-#                               
-#                               `Date` = formatter("span", style = ~ style(font.weight = "bold")),
-#                               `Flow rate (C/m/s)` = color_tile("azure1", "cadetblue4"))),
-#              options = list(paging = TRUE, searching = TRUE))
-
-
-#     "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
-#     layers = "nexrad-n0r-900913",
-#     options = WMSTileOptions(format = "image/png", transparent = TRUE, opacity = .15), 
-#     group = "Rainfall"
-#   ) %>% 
-#   addTerminator(group = "daylight") %>% 
-#   addLayersControl(
-#     baseGroups = c("Grayscale", "OSM", "Imagery"), 
-#     overlayGroups = c("Rainfall", "daylight"),
-#     options = layersControlOptions(collapsed = TRUE),
-#     position = 'topleft') %>% 
-#   addScaleBar("bottomleft") %>%
-#   addMiniMap( toggleDisplay = TRUE, minimized = TRUE) %>%
-#   addMeasure(
-#     position = "bottomleft",
-#     primaryLengthUnit = "feet",
-#     primaryAreaUnit = "sqmiles",
-#     activeColor = "red",
-#     completedColor = "green" ) %>% 
-#   addEasyButtonBar(
-#     easyButton(
-#       icon='fa-crosshairs', title='Zoom to Risk Points',
-#       onClick=JS(paste0("function(btn, map){ map.setView(new L.LatLng(",lat,", ", lon,"), 8);}")))
-#   ) %>%
-#   hideGroup(c("daylight", "Rainfall")) %>% 
-#   leafem::addMouseCoordinates()
-
+# USGS Water use data
+water_use_data <- function(state, county) {
+  water_use <- dataRetrieval::readNWISuse(stateCd = state, countyCd = county) %>%
+    janitor::clean_names()
+  water_use <- water_use %>%
+    select(1:6, contains("total_self_supplied_withdrawals_surface_water"), contains("surface_water_withdrawals_for_golf"))
+  water_use <- water_use %>%
+    mutate(across(5:22, as.numeric)) %>% 
+    replace(is.na(.), 0) 
+  water_use <- water_use %>%
+    rename(statefips = state_cd,
+           countyfips = county_cd,
+           pop = total_population_total_population_of_area_in_thousands,
+           livestock1 = livestock_stock_total_self_supplied_withdrawals_surface_water_in_mgal_d,
+           livestock2 = livestock_animal_specialties_total_self_supplied_withdrawals_surface_water_in_mgal_d,
+           therm1 = thermoelectric_power_closed_loop_cooling_total_self_supplied_withdrawals_surface_water_in_mgal_d,
+           therm2 = thermoelectric_power_once_through_cooling_total_self_supplied_withdrawals_surface_water_in_mgal,
+           aquacultere1 = aquaculture_total_self_supplied_withdrawals_surface_water_in_mgal_d,
+           irrigation1 = irrigation_total_total_self_supplied_withdrawals_surface_water_in_mgal_d,
+           irrigation2 = irrigation_golf_courses_self_supplied_surface_water_withdrawals_for_golf_courses_fresh_in_mgal_d)
+  
+  for ( col in 1:ncol(water_use)){
+    colnames(water_use)[col] <-  sub("_.*", "", colnames(water_use)[col])
+  }
+  
+  water_use <- water_use %>%
+    mutate("Public supply" = public + domestic,
+           Thermoelectric = total,
+           Irrigation = livestock1 + livestock2 + aquacultere1 + irrigation1 + irrigation2) %>%
+    select(1:6, "Public supply", Irrigation, Industrial = industrial, Mining = mining,  Thermoelectric)
+  water_use <- water_use %>%
+    tidyr::unite('fips', statefips, countyfips)
+  water_use$fips <- gsub("_", "", water_use$fips)
+  water_use$fips <- as.numeric(water_use$fips)
+  water_use <- water_use %>%
+    tidyr::pivot_longer(6:10, names_to = "sector", values_to = "withdrawals")
+  water_use <- group_by(water_use, sector, year)
+}
 
 zoom_to_catch = function(map, df, catchment){
   # Filter the counties to the input FIP code
