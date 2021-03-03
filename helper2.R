@@ -19,51 +19,51 @@
 
 
 
-library(climateR)
+# library(climateR)
 
+### TEST POINT ####
+lat = 35.6643
+lng = -96.91935
+pt <- data.frame(lat, lng)
+pt <- sf::st_as_sf(pt,
+                   coords = c("lng", "lat"),
+                   crs = 4326)
+nldi <- findNLDI(location = pt)
+centroid <- st_centroid(nldi)
 
-#### TEST POINT ####
-# lat = 35.6643
-# lng = -96.91935
-# pt <- data.frame(lat, lng)
-# pt <- sf::st_as_sf(pt,
-#                    coords = c("lng", "lat"),
-#                    crs = 4326)
-# nldi <- findNLDI(location = pt)
-# centroid <- st_centroid(nldi)
-# 
-# tmp1 <- AOI::(centroid)
 # param_meta$terraclim
-# mapview::mapview(centroid)
-# 
-# srad = getGridMET(AOI::geocode("UCSB", pt = TRUE), 
-#                   param = "srad", 
-#                   startDate = "2020-01-01", 
-#                   endDate = "2020-10-01")
-# 
-# precip <- climateR::getTerraClim(AOI = centroid, param = "prcp",
-#                        startDate = "1993-01-01", 
-#                        endDate = "2014-12-31")
-# 
-# evapot <- climateR::getTerraClim(AOI = centroid, param = "aet",
-#                                  startDate = "1993-01-01", 
-#                                  endDate = "2014-12-31")
-# 
-# srad <- climateR::getTerraClim(AOI = centroid, param = "srad",
-#                                  startDate = "1993-01-01", 
-#                                  endDate = "2014-12-31")
-# 
-# highchart() %>%  
-#   hc_add_series(evapot, hcaes(x = date, y = aet), type = "line") %>%
-#   hc_add_series(precip,hcaes(x = date, y = precip), type = "column")
-# 
+
+terra <- climateR::getTerraClim(AOI = centroid, param = c("prcp", "aet"),
+                       startDate = "1993-01-01",
+                       endDate = "2014-12-31")
+
+highchart() %>%
+  hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
+                          min=0,
+                          max = max(terra$prcp),
+                          # labels = list(format = "{value}"),
+                          showFirstLabel = TRUE,
+                          showLastLabel = TRUE,
+                          opposite = FALSE),
+                     list(title = list(text = "Actual Evapotranspiration (mm)"),
+                          # labels=list(format = '{value}%'),
+                          # min=0,
+                          # max=max(terra$aet),
+                          # showFirstLabel = TRUE,
+                          showLastLabel=FALSE,
+                          opposite = TRUE)) %>%
+  hc_add_series(terra, type = "column", hcaes(x = date, y = prcp), yAxis = 1 ) %>%
+  hc_add_series(terra, type = "line", hcaes(x = date, y = aet), yAxis = 0) %>%
+  hc_colors(c("darkcyan", "darkred"))
+
+
 #  hchart(type = "line", hcaes(x = date, y = aet)) %>%
-#   hc_colors(c("darkcyan")) %>% 
-#   hc_add_series(data = precip) %>% 
+#   hc_colors(c("darkcyan")) %>%
+#   hc_add_series(data = precip) %>%
 #   hc_colors(c("red"))
-  # stat_smooth(col = "red") + 
-  # theme_linedraw() + 
-  # scale_color_viridis_c()
+# stat_smooth(col = "red") +
+# theme_linedraw() +
+# scale_color_viridis_c()
 
 #
 #####################
