@@ -22,39 +22,39 @@
 # library(climateR)
 
 ### TEST POINT ####
-lat = 35.6643
-lng = -96.91935
-pt <- data.frame(lat, lng)
-pt <- sf::st_as_sf(pt,
-                   coords = c("lng", "lat"),
-                   crs = 4326)
-nldi <- findNLDI(location = pt)
-centroid <- st_centroid(nldi)
-
-# param_meta$terraclim
-
-terra <- climateR::getTerraClim(AOI = centroid, param = c("prcp", "aet"),
-                       startDate = "1993-01-01",
-                       endDate = "2014-12-31")
-
-highchart() %>%
-  hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
-                          min=0,
-                          max = max(terra$prcp),
-                          # labels = list(format = "{value}"),
-                          showFirstLabel = TRUE,
-                          showLastLabel = TRUE,
-                          opposite = FALSE),
-                     list(title = list(text = "Actual Evapotranspiration (mm)"),
-                          # labels=list(format = '{value}%'),
-                          # min=0,
-                          # max=max(terra$aet),
-                          # showFirstLabel = TRUE,
-                          showLastLabel=FALSE,
-                          opposite = TRUE)) %>%
-  hc_add_series(terra, type = "column", hcaes(x = date, y = prcp), yAxis = 1 ) %>%
-  hc_add_series(terra, type = "line", hcaes(x = date, y = aet), yAxis = 0) %>%
-  hc_colors(c("darkcyan", "darkred"))
+# lat = 35.6643
+# lng = -96.91935
+# pt <- data.frame(lat, lng)
+# pt <- sf::st_as_sf(pt,
+#                    coords = c("lng", "lat"),
+#                    crs = 4326)
+# nldi <- findNLDI(location = pt)
+# centroid <- st_centroid(nldi)
+# 
+# # param_meta$terraclim
+# 
+# terra <- climateR::getTerraClim(AOI = centroid, param = c("prcp", "aet"),
+#                        startDate = "1993-01-01",
+#                        endDate = "2014-12-31")
+# 
+# highchart() %>%
+#   hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
+#                           min=0,
+#                           max = max(terra$prcp),
+#                           # labels = list(format = "{value}"),
+#                           showFirstLabel = TRUE,
+#                           showLastLabel = TRUE,
+#                           opposite = FALSE),
+#                      list(title = list(text = "Actual Evapotranspiration (mm)"),
+#                           # labels=list(format = '{value}%'),
+#                           # min=0,
+#                           # max=max(terra$aet),
+#                           # showFirstLabel = TRUE,
+#                           showLastLabel=FALSE,
+#                           opposite = TRUE)) %>%
+#   hc_add_series(terra, type = "column", hcaes(x = date, y = prcp), yAxis = 1 ) %>%
+#   hc_add_series(terra, type = "line", hcaes(x = date, y = aet), yAxis = 0) %>%
+#   hc_colors(c("darkcyan", "darkred"))
 
 
 #  hchart(type = "line", hcaes(x = date, y = aet)) %>%

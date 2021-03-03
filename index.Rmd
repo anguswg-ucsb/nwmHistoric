@@ -5,7 +5,7 @@ output:
   flexdashboard::flex_dashboard:
     navbar:
       - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
-    theme: flatly
+    theme: cerulean
     orientation: row
     vertical_layout: fill
 ---
@@ -450,30 +450,3 @@ output$climateGraph <- renderHighchart({
         climateData()
       })
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

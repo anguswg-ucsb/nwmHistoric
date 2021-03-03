@@ -1,0 +1,15 @@
+---
+name: "NWM"
+navbar:
+  title: "National Water Model"
+  left:
+    - text: "Home"
+      href: index.html
+output:
+  flexdashboard::flex_dashboard:
+    navbar:
+      - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
+    theme: cerulean
+    orientation: row
+    vertical_layout: fill
+---
