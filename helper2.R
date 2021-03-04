@@ -21,7 +21,7 @@
 
 # library(climateR)
 
-### TEST POINT ####
+### TEST POINT FOR CLIMATE DATA ####
 # lat = 35.6643
 # lng = -96.91935
 # pt <- data.frame(lat, lng)
@@ -31,29 +31,23 @@
 # nldi <- findNLDI(location = pt)
 # centroid <- st_centroid(nldi)
 # 
-# # param_meta$terraclim
-# 
-# terra <- climateR::getTerraClim(AOI = centroid, param = c("prcp", "aet"),
+# param_meta$terraclim
+# # 
+# temp <- climateR::getTerraClim(AOI = centroid, param = c("tmax", "tmin"),
 #                        startDate = "1993-01-01",
 #                        endDate = "2014-12-31")
-# 
+# df = parse_date_time(temp$date,)
+# temp2 <- temp %>%
+#   mutate(date = parse_date_time(temp$date, "ym")) %>%
+#   mutate(month = month(date), year = year(date)) %>%
+#   group_by(month) %>%
+#   mutate(meanMax = mean(tmax), meanMin = mean(tmin))
+#   group_by(month, year) %>%
+#   summarise(total = sum(value))
+# #   
 # highchart() %>%
-#   hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
-#                           min=0,
-#                           max = max(terra$prcp),
-#                           # labels = list(format = "{value}"),
-#                           showFirstLabel = TRUE,
-#                           showLastLabel = TRUE,
-#                           opposite = FALSE),
-#                      list(title = list(text = "Actual Evapotranspiration (mm)"),
-#                           # labels=list(format = '{value}%'),
-#                           # min=0,
-#                           # max=max(terra$aet),
-#                           # showFirstLabel = TRUE,
-#                           showLastLabel=FALSE,
-#                           opposite = TRUE)) %>%
-#   hc_add_series(terra, type = "column", hcaes(x = date, y = prcp), yAxis = 1 ) %>%
-#   hc_add_series(terra, type = "line", hcaes(x = date, y = aet), yAxis = 0) %>%
+#   hc_add_series(temp2, type = "column", hcaes(x = month, y = meanMax)) %>%
+#   hc_add_series(temp2, type = "column", hcaes(x = month, y = meanMin)) %>%
 #   hc_colors(c("darkcyan", "darkred"))
 
 

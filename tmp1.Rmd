@@ -128,9 +128,21 @@ Row
 leafletOutput("catchMap")
 ```
 
-### Time series
+{.tabset .tabset-fade}
+
+### Time series 
 ```{r}
 dygraphOutput("catchTS")
+```
+
+### Long temp mean 
+```{r}
+# tabsetPanel(type = "tabs",
+#             tabPanel("Water use", highchartOutput("waterUseGraph", height = "800px")),
+#             tabPanel("Monthly flows", highchartOutput("catchAggGraph", height = "800px")),
+#             tabPanel("Climate", highchartOutput('precipGraph', height = "800px")),
+#             tabPanel("temp" , highchartOutput("tempGraph", height = "800px")))
+highchartOutput("tempGraph")
 ```
 
 ```{r context = "server"}
@@ -148,23 +160,23 @@ dygraphOutput("catchTS")
     comid <<- nldi$comid
     print(comid)
     print("map1_click")
-    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    # catch_df <- get_nhdplus(comid = comid, realization = "catchment")
     
-    # bb <- st_bbox(nldi) # current bounding box
-    # # bounding box range
-    # xrange <- bb$xmax - bb$xmin # range of x values
-    # yrange <- bb$ymax - bb$ymin # range of y values
-    # # expand bb by 60% 
-    # bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
-    # bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
-    # bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
-    # bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
-    # # make bb a sfc
-    # bb <- bb %>%  # take the bounding box ...
-    #     st_as_sfc() 
-    # catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
-    # catch_df2 <- catch_df %>% 
-    #   filter(featureid == comid)
+    bb <- st_bbox(nldi) # current bounding box
+    # bounding box range
+    xrange <- bb$xmax - bb$xmin # range of x values
+    yrange <- bb$ymax - bb$ymin # range of y values
+    # expand bb by 60%
+    bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
+    bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
+    bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
+    bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
+    # make bb a sfc
+    bb <- bb %>%  # take the bounding box ...
+        st_as_sfc()
+    catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
+    catch_df2 <- catch_df %>%
+      filter(featureid == comid)
     output$comidBox <- renderValueBox({
     valueBox(value = paste("COMID: ", comid),
       icon = "fa-water",
@@ -175,9 +187,9 @@ dygraphOutput("catchTS")
       addMarkers(data = pt,
                  layerId = ~comid) %>% 
        addPolygons( data = catch_df,
-                   col = 'yellow')
-      # addPolygons( data = catch_df2,
-      #              col = 'red') %>% 
+                   col = 'yellow') %>% 
+      addPolygons( data = catch_df2,
+                   col = 'red') 
       # zoom_to_catch(catch_df, comid)
     leafletProxy("catchMap2") %>%
       clearMarkers() %>%
@@ -185,9 +197,9 @@ dygraphOutput("catchTS")
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   col = 'yellow')
-      # addPolygons( data = catch_df2,
-      #              col = 'red') 
+                   col = 'yellow') %>% 
+      addPolygons( data = catch_df2,
+                   col = 'red')
    } 
 })
 
@@ -206,23 +218,23 @@ observeEvent(input$catchMap2_click, {
     print(comid)
     print("map2_click")
     #
-    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    # catch_df <- get_nhdplus(comid = comid, realization = "catchment")
     
-    # bb <- st_bbox(nldi) # current bounding box
-    # # bounding box range
-    # xrange <- bb$xmax - bb$xmin # range of x values
-    # yrange <- bb$ymax - bb$ymin # range of y values
-    # # expand bb by 60% 
-    # bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
-    # bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
-    # bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
-    # bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
-    # # make bb a sfc
-    # bb <- bb %>%  # take the bounding box ...
-    #     st_as_sfc() 
-    # catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
-    # catch_df2 <- catch_df %>% 
-    #   filter(featureid == comid)
+    bb <- st_bbox(nldi) # current bounding box
+    # bounding box range
+    xrange <- bb$xmax - bb$xmin # range of x values
+    yrange <- bb$ymax - bb$ymin # range of y values
+    # expand bb by 60%
+    bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
+    bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
+    bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
+    bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
+    # make bb a sfc
+    bb <- bb %>%  # take the bounding box ...
+        st_as_sfc()
+    catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
+    catch_df2 <- catch_df %>%
+      filter(featureid == comid)
     
     output$comidBox <- renderValueBox({
     valueBox(value = paste("COMID: ", comid),
@@ -235,9 +247,9 @@ observeEvent(input$catchMap2_click, {
       addMarkers(data = pt,
                  layerId = ~comid,) %>% 
       addPolygons( data = catch_df,
-                   col = 'red') 
-      # addPolygons( data = catch_df2,
-      #              col = 'yellow')
+                   col = 'red') %>% 
+      addPolygons( data = catch_df2,
+                   col = 'yellow')
       # zoom_to_catch(catch_df, comid)
     leafletProxy("catchMap2") %>%
       clearMarkers() %>%
@@ -245,9 +257,9 @@ observeEvent(input$catchMap2_click, {
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   col = 'red')
-      # addPolygons( data = catch_df2,
-      #              col = 'yellow')
+                   col = 'red') %>% 
+      addPolygons( data = catch_df2,
+                   col = 'yellow')
    } 
 })
 
@@ -273,11 +285,11 @@ leafletOutput("catchMap2")
 
 ### Climate
 ```{r}
-highchartOutput('climateGraph')
+highchartOutput('precipGraph')
 # tabsetPanel(type = "tabs",
 #             tabPanel("Water use", highchartOutput("waterUseGraph")),
 #             tabPanel("Monthly flows", highchartOutput("catchAggGraph")),
-#             tabPanel("Climate", highchartOutput('climateGraph')))
+#             tabPanel("Climate", highchartOutput('precipGraph')))
 ```
 
 ### Monthly Flow Totals
@@ -371,7 +383,7 @@ dateTSText2 <- eventReactive(input$dateButton, {
 ```{r context = "server"}
 
 # Time series plot reactive to input of date button
-  catchTSplot <- eventReactive(input$dateButton, {
+catchTSplot <- eventReactive(input$dateButton, {
     nwm <- readNWMdata(comid = comid)
     ts = xts::xts(as.data.frame(nwm$flow_cms), order.by =nwm$dateTime, tz= 'UTC')
     dygraph(ts)  %>%
@@ -383,26 +395,28 @@ dateTSText2 <- eventReactive(input$dateButton, {
                                          as.character(r$dateTS[2] + 1)))
 
   })
-  
-  output$catchTS <- renderDygraph({
+
+# Render time series after action button is clicked 
+output$catchTS <- renderDygraph({
         catchTSplot()
       })
 
 # year-month aggregated flow 
-  aggPlot <- eventReactive(input$dateButton, {
+aggPlot <- eventReactive(input$dateButton, {
         nwm <-  readNWMdata(comid = comid)
         agg <- nwmHistoric::aggregate_ym(nwm)
     
       hchart(agg, type = "column", hcaes(x = ym, y = flow_cms)) %>%
         hc_colors(c("red", "green", "blue", "grey", "orange"))
     })
-  
-  output$catchAggGraph <- renderHighchart({
+
+# Render monthly flow totals after action button is clicked 
+output$catchAggGraph <- renderHighchart({
           aggPlot()
         })
 
   
-  countyData <- eventReactive(input$dateButton, {
+countyData <- eventReactive(input$dateButton, {
 
     nldi <- findNLDI(comid = comid) %>% 
       st_centroid()
@@ -421,7 +435,7 @@ output$waterUseGraph <- renderHighchart({
         countyData()
       })
 
-climateData <- eventReactive(input$dateButton, {
+precipData <- eventReactive(input$dateButton, {
   
     nldi <- findNLDI(comid = comid) %>% 
       st_centroid()
@@ -446,8 +460,34 @@ climateData <- eventReactive(input$dateButton, {
 
     })
 
-output$climateGraph <- renderHighchart({
-        climateData()
+output$precipGraph <- renderHighchart({
+        precipData()
+      })
+
+tempData <- eventReactive(input$dateButton, {
+  
+    nldi <- findNLDI(comid = comid) %>% 
+      st_centroid()
+    temp <- climateR::getTerraClim(AOI = nldi, param = c("tmax", "tmin"),
+                       startDate = "1993-01-01",
+                       endDate = "2014-12-31")
+
+    temp <- temp %>%
+      mutate(date = parse_date_time(temp$date, "ym")) %>%
+      mutate(month = month(date), year = year(date)) %>%
+      group_by(month) %>%
+      mutate(meanMax = mean(tmax), meanMin = mean(tmin))
+    
+    highchart() %>%
+      hc_add_series(temp, type = "column", hcaes(x = month, y = meanMax)) %>%
+      hc_add_series(temp, type = "column", hcaes(x = month, y = meanMin)) %>%
+      hc_colors(c("darkcyan", "darkred"))
+
+
+    })
+
+output$tempGraph <- renderHighchart({
+        tempData()
       })
 ```
 
