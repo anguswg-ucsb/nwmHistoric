@@ -121,28 +121,16 @@ Row
 valueBoxOutput("comidBox")
 ```
 
-Row 
+Row {data-height=650}
 -----------------------------------------------------------------------
-### Draw
-```{r}
+### Draw 
+```{r, fig.width = 550}
 leafletOutput("catchMap")
 ```
 
-{.tabset .tabset-fade}
-
-### Time series 
-```{r}
-dygraphOutput("catchTS")
-```
-
-### Long temp mean 
-```{r}
-# tabsetPanel(type = "tabs",
-#             tabPanel("Water use", highchartOutput("waterUseGraph", height = "800px")),
-#             tabPanel("Monthly flows", highchartOutput("catchAggGraph", height = "800px")),
-#             tabPanel("Climate", highchartOutput('precipGraph', height = "800px")),
-#             tabPanel("temp" , highchartOutput("tempGraph", height = "800px")))
-highchartOutput("tempGraph")
+### Map 2
+```{r, fig.width = 350}
+leafletOutput("catchMap2")
 ```
 
 ```{r context = "server"}
@@ -160,23 +148,23 @@ highchartOutput("tempGraph")
     comid <<- nldi$comid
     print(comid)
     print("map1_click")
-    # catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
     
-    bb <- st_bbox(nldi) # current bounding box
-    # bounding box range
-    xrange <- bb$xmax - bb$xmin # range of x values
-    yrange <- bb$ymax - bb$ymin # range of y values
-    # expand bb by 60%
-    bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
-    bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
-    bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
-    bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
-    # make bb a sfc
-    bb <- bb %>%  # take the bounding box ...
-        st_as_sfc()
-    catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
-    catch_df2 <- catch_df %>%
-      filter(featureid == comid)
+    # bb <- st_bbox(nldi) # current bounding box
+    # # bounding box range
+    # xrange <- bb$xmax - bb$xmin # range of x values
+    # yrange <- bb$ymax - bb$ymin # range of y values
+    # # expand bb by 60%
+    # bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
+    # bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
+    # bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
+    # bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
+    # # make bb a sfc
+    # bb <- bb %>%  # take the bounding box ...
+    #     st_as_sfc()
+    # catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
+    # catch_df2 <- catch_df %>%
+    #   filter(featureid == comid)
     output$comidBox <- renderValueBox({
     valueBox(value = paste("COMID: ", comid),
       icon = "fa-water",
@@ -187,19 +175,30 @@ highchartOutput("tempGraph")
       addMarkers(data = pt,
                  layerId = ~comid) %>% 
        addPolygons( data = catch_df,
-                   col = 'yellow') %>% 
-      addPolygons( data = catch_df2,
-                   col = 'red') 
+                   col = 'yellow') 
+      # addPolygons( data = catch_df2,
+      #              col = 'red') 
       # zoom_to_catch(catch_df, comid)
+    
+ 
+    bounds <- st_bbox(pt) %>% 
+      st_as_sfc() %>% 
+      st_buffer(.1) %>% 
+      st_bbox() %>% 
+      as.vector() 
+    # bounds <- bounds %>% 
+    #   st
+    
     leafletProxy("catchMap2") %>%
       clearMarkers() %>%
       clearShapes() %>%
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   col = 'yellow') %>% 
-      addPolygons( data = catch_df2,
-                   col = 'red')
+                   col = 'yellow') %>%
+      flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
+      # addPolygons( data = catch_df2,
+      #              col = 'red')
    } 
 })
 
@@ -278,11 +277,20 @@ observeEvent(input$catchMap2_click, {
 
 Row {.tabset .tabset-fade}
 -----------------------------------------------------------------------
-### Map 2
+### Time series 
 ```{r}
-leafletOutput("catchMap2")
+dygraphOutput("catchTS")
 ```
 
+### Long temp mean 
+```{r}
+# tabsetPanel(type = "tabs",
+#             tabPanel("Water use", highchartOutput("waterUseGraph", height = "800px")),
+#             tabPanel("Monthly flows", highchartOutput("catchAggGraph", height = "800px")),
+#             tabPanel("Climate", highchartOutput('precipGraph', height = "800px")),
+#             tabPanel("temp" , highchartOutput("tempGraph", height = "800px")))
+highchartOutput("tempGraph")
+```
 ### Climate
 ```{r}
 highchartOutput('precipGraph')
