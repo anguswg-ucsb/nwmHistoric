@@ -114,7 +114,7 @@ shiny::actionButton("dateButton", label = "Enter", icon("search"))
 # })
 ```
 
-Column {data-width=550}
+Column {data-width=550} {.tabset}
 -----------------------------------------------------------------------
 ### 
 ```{r}
