@@ -6,7 +6,7 @@ output:
     navbar:
       - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
     theme: flatly
-    orientation: row
+    orientation: columns
     vertical_layout: fill
 ---
 
@@ -114,23 +114,22 @@ shiny::actionButton("dateButton", label = "Enter", icon("search"))
 # })
 ```
 
-Row 
+Column {data-width=550}
 -----------------------------------------------------------------------
 ### 
 ```{r}
 valueBoxOutput("comidBox")
 ```
 
-Row {data-height=650}
------------------------------------------------------------------------
 ### Draw 
-```{r, fig.width = 550}
+```{r}
+# fig.width = 550
 leafletOutput("catchMap")
 ```
 
-### Map 2
-```{r, fig.width = 350}
-leafletOutput("catchMap2")
+### Time series 
+```{r}
+dygraphOutput("catchTS")
 ```
 
 ```{r context = "server"}
@@ -169,25 +168,24 @@ leafletOutput("catchMap2")
     valueBox(value = paste("COMID: ", comid),
       icon = "fa-water",
       color = "primary") })
+    
+    bounds <- st_bbox(pt) %>% 
+      st_as_sfc() %>% 
+      st_buffer(.1) %>% 
+      st_bbox() %>% 
+      as.vector()
+    
     leafletProxy("catchMap") %>% 
       clearMarkers() %>%
       clearShapes() %>% 
       addMarkers(data = pt,
                  layerId = ~comid) %>% 
        addPolygons( data = catch_df,
-                   col = 'yellow') 
+                   col = 'red') %>% 
+      flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
       #              col = 'red') 
       # zoom_to_catch(catch_df, comid)
-    
- 
-    bounds <- st_bbox(pt) %>% 
-      st_as_sfc() %>% 
-      st_buffer(.1) %>% 
-      st_bbox() %>% 
-      as.vector() 
-    # bounds <- bounds %>% 
-    #   st
     
     leafletProxy("catchMap2") %>%
       clearMarkers() %>%
@@ -195,7 +193,7 @@ leafletOutput("catchMap2")
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   col = 'yellow') %>%
+                   col = 'red') %>%
       flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
       #              col = 'red')
@@ -217,29 +215,35 @@ observeEvent(input$catchMap2_click, {
     print(comid)
     print("map2_click")
     #
-    # catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
     
-    bb <- st_bbox(nldi) # current bounding box
-    # bounding box range
-    xrange <- bb$xmax - bb$xmin # range of x values
-    yrange <- bb$ymax - bb$ymin # range of y values
-    # expand bb by 60%
-    bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
-    bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
-    bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
-    bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
-    # make bb a sfc
-    bb <- bb %>%  # take the bounding box ...
-        st_as_sfc()
-    catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
-    catch_df2 <- catch_df %>%
-      filter(featureid == comid)
+    # bb <- st_bbox(nldi) # current bounding box
+    # # bounding box range
+    # xrange <- bb$xmax - bb$xmin # range of x values
+    # yrange <- bb$ymax - bb$ymin # range of y values
+    # # expand bb by 60%
+    # bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
+    # bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
+    # bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
+    # bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
+    # # make bb a sfc
+    # bb <- bb %>%  # take the bounding box ...
+    #     st_as_sfc()
+    # catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
+    # catch_df2 <- catch_df %>%
+    #   filter(featureid == comid)
     
     output$comidBox <- renderValueBox({
     valueBox(value = paste("COMID: ", comid),
       icon = "fa-id-badge",
       color = "primary") })
-  
+    
+    bounds <- st_bbox(pt) %>% 
+      st_as_sfc() %>% 
+      st_buffer(.1) %>% 
+      st_bbox() %>% 
+      as.vector()
+    
     leafletProxy("catchMap") %>% 
       clearMarkers() %>%
       clearShapes() %>% 
@@ -247,8 +251,9 @@ observeEvent(input$catchMap2_click, {
                  layerId = ~comid,) %>% 
       addPolygons( data = catch_df,
                    col = 'red') %>% 
-      addPolygons( data = catch_df2,
-                   col = 'yellow')
+      flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
+      # addPolygons( data = catch_df2,
+      #              col = 'yellow')
       # zoom_to_catch(catch_df, comid)
     leafletProxy("catchMap2") %>%
       clearMarkers() %>%
@@ -256,9 +261,9 @@ observeEvent(input$catchMap2_click, {
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   col = 'red') %>% 
-      addPolygons( data = catch_df2,
-                   col = 'yellow')
+                   col = 'red')
+      # addPolygons( data = catch_df2,
+      #              col = 'yellow')
    } 
 })
 
@@ -275,39 +280,22 @@ observeEvent(input$catchMap2_click, {
 })
 ```
 
-Row {.tabset .tabset-fade}
+Column {data-width=350}
 -----------------------------------------------------------------------
-### Time series 
-```{r}
-dygraphOutput("catchTS")
+### Climate 
+```{r, fig.height=300}
+# {.tabset data-width=400}
+tabsetPanel(type = "tabs",
+            tabPanel("Precipitation", highchartOutput('precipGraph', height = "100%")),
+            tabPanel("Monthly flows", highchartOutput("catchAggGraph", height = "100%")),
+            tabPanel("Temperature" , highchartOutput("tempGraph", height = "100%")),
+            tabPanel("Water use", highchartOutput("waterUseGraph", height = "100%")))
+# highchartOutput("tempGraph")
 ```
 
-### Long temp mean 
-```{r}
-# tabsetPanel(type = "tabs",
-#             tabPanel("Water use", highchartOutput("waterUseGraph", height = "800px")),
-#             tabPanel("Monthly flows", highchartOutput("catchAggGraph", height = "800px")),
-#             tabPanel("Climate", highchartOutput('precipGraph', height = "800px")),
-#             tabPanel("temp" , highchartOutput("tempGraph", height = "800px")))
-highchartOutput("tempGraph")
-```
-### Climate
-```{r}
-highchartOutput('precipGraph')
-# tabsetPanel(type = "tabs",
-#             tabPanel("Water use", highchartOutput("waterUseGraph")),
-#             tabPanel("Monthly flows", highchartOutput("catchAggGraph")),
-#             tabPanel("Climate", highchartOutput('precipGraph')))
-```
-
-### Monthly Flow Totals
-```{r}
-highchartOutput("catchAggGraph")
-```
-
-### Water use
-```{r}
-highchartOutput("waterUseGraph")
+### Map 2 
+```{r, fig.height=500}
+leafletOutput("catchMap2")
 ```
 
 ```{r context = "server"}
