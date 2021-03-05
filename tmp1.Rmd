@@ -5,7 +5,7 @@ output:
   flexdashboard::flex_dashboard:
     navbar:
       - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
-    theme: flatly
+    theme: cerulean
     orientation: columns
     vertical_layout: fill
 ---
@@ -147,23 +147,17 @@ dygraphOutput("catchTS")
     comid <<- nldi$comid
     print(comid)
     print("map1_click")
-    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
     
-    # bb <- st_bbox(nldi) # current bounding box
-    # # bounding box range
-    # xrange <- bb$xmax - bb$xmin # range of x values
-    # yrange <- bb$ymax - bb$ymin # range of y values
-    # # expand bb by 60%
-    # bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
-    # bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
-    # bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
-    # bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
-    # # make bb a sfc
-    # bb <- bb %>%  # take the bounding box ...
-    #     st_as_sfc()
-    # catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
-    # catch_df2 <- catch_df %>%
-    #   filter(featureid == comid)
+    # catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    bb <- nldi %>%
+      st_centroid() %>%
+      st_buffer(0.05)
+    
+    catch_df2 <- get_nhdplus(AOI = bb, realization = "catchment")
+    
+    catch_df <- catch_df2 %>%
+      filter(featureid == comid)
+    
     output$comidBox <- renderValueBox({
     valueBox(value = paste("COMID: ", comid),
       icon = "fa-water",
@@ -171,7 +165,7 @@ dygraphOutput("catchTS")
     
     bounds <- st_bbox(pt) %>% 
       st_as_sfc() %>% 
-      st_buffer(.1) %>% 
+      st_buffer(.05) %>% 
       st_bbox() %>% 
       as.vector()
     
@@ -181,7 +175,9 @@ dygraphOutput("catchTS")
       addMarkers(data = pt,
                  layerId = ~comid) %>% 
        addPolygons( data = catch_df,
-                   col = 'red') %>% 
+                   fillColor = 'red',
+                   col = "black",
+                   weight = 2) %>% 
       flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
       #              col = 'red') 
@@ -193,7 +189,13 @@ dygraphOutput("catchTS")
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   col = 'red') %>%
+                   fillColor = 'red',
+                   col = "black",
+                   weight = 2) %>%
+      addPolygons( data = catch_df2,
+                   fillColor = 'lightgrey',
+                   col = "black",
+                   weight = 2) %>% 
       flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
       #              col = 'red')
@@ -215,8 +217,11 @@ observeEvent(input$catchMap2_click, {
     print(comid)
     print("map2_click")
     #
-    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    # catch_df <- get_nhdplus(comid = comid, realization = "catchment")
     
+    bb <- nldi %>% 
+      st_centroid() %>% 
+      st_buffer(0.05)
     # bb <- st_bbox(nldi) # current bounding box
     # # bounding box range
     # xrange <- bb$xmax - bb$xmin # range of x values
@@ -229,9 +234,9 @@ observeEvent(input$catchMap2_click, {
     # # make bb a sfc
     # bb <- bb %>%  # take the bounding box ...
     #     st_as_sfc()
-    # catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
-    # catch_df2 <- catch_df %>%
-    #   filter(featureid == comid)
+    catch_df2 <- get_nhdplus(AOI = bb, realization = "catchment")
+    catch_df <- catch_df2 %>%
+      filter(featureid == comid)
     
     output$comidBox <- renderValueBox({
     valueBox(value = paste("COMID: ", comid),
@@ -240,7 +245,7 @@ observeEvent(input$catchMap2_click, {
     
     bounds <- st_bbox(pt) %>% 
       st_as_sfc() %>% 
-      st_buffer(.1) %>% 
+      st_buffer(.05) %>% 
       st_bbox() %>% 
       as.vector()
     
@@ -250,10 +255,12 @@ observeEvent(input$catchMap2_click, {
       addMarkers(data = pt,
                  layerId = ~comid,) %>% 
       addPolygons( data = catch_df,
-                   col = 'red') %>% 
+                   fillColor = 'red',
+                   col = "black",
+                   weight = 2) %>% 
       flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
-      #              col = 'yellow')
+      #              col = 'blue')
       # zoom_to_catch(catch_df, comid)
     leafletProxy("catchMap2") %>%
       clearMarkers() %>%
@@ -261,9 +268,13 @@ observeEvent(input$catchMap2_click, {
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   col = 'red')
-      # addPolygons( data = catch_df2,
-      #              col = 'yellow')
+                   fillColor = 'red',
+                   col = "black",
+                   weight = 2) %>% 
+      addPolygons( data = catch_df2,
+                   fillColor = "grey",
+                   col = "black",
+                   weight = 2)
    } 
 })
 
@@ -378,7 +389,7 @@ dateTSText2 <- eventReactive(input$dateButton, {
   
 ```{r context = "server"}
 
-# Time series plot reactive to input of date button
+# Time series data/plot, reactive to input of date button
 catchTSplot <- eventReactive(input$dateButton, {
     nwm <- readNWMdata(comid = comid)
     ts = xts::xts(as.data.frame(nwm$flow_cms), order.by =nwm$dateTime, tz= 'UTC')
@@ -397,7 +408,7 @@ output$catchTS <- renderDygraph({
         catchTSplot()
       })
 
-# year-month aggregated flow 
+# year-month aggregated flow data/plot, reactive to input of date button
 aggPlot <- eventReactive(input$dateButton, {
         nwm <-  readNWMdata(comid = comid)
         agg <- nwmHistoric::aggregate_ym(nwm)
@@ -406,12 +417,12 @@ aggPlot <- eventReactive(input$dateButton, {
         hc_colors(c("red", "green", "blue", "grey", "orange"))
     })
 
-# Render monthly flow totals after action button is clicked 
+# Render monthly flow totals plot after action button is clicked 
 output$catchAggGraph <- renderHighchart({
           aggPlot()
         })
 
-  
+# county water use data/plot, reactive to input of date button
 countyData <- eventReactive(input$dateButton, {
 
     nldi <- findNLDI(comid = comid) %>% 
@@ -426,11 +437,12 @@ countyData <- eventReactive(input$dateButton, {
       hc_colors(c("red", "green", "grey", "blue", "orange"))
   })
 
-
+# Render water use plot after action button is clicked 
 output$waterUseGraph <- renderHighchart({
         countyData()
       })
 
+# precip & evapotran data/plot, reactive to input of date button
 precipData <- eventReactive(input$dateButton, {
   
     nldi <- findNLDI(comid = comid) %>% 
@@ -456,10 +468,12 @@ precipData <- eventReactive(input$dateButton, {
 
     })
 
+# Render precip/evapo plot after action button is clicked 
 output$precipGraph <- renderHighchart({
         precipData()
       })
 
+# monthly mean Min and Max temps data/plot, reactive to input of date button
 tempData <- eventReactive(input$dateButton, {
   
     nldi <- findNLDI(comid = comid) %>% 
@@ -481,7 +495,7 @@ tempData <- eventReactive(input$dateButton, {
 
 
     })
-
+# Render mean temp plot after action button is clicked 
 output$tempGraph <- renderHighchart({
         tempData()
       })
