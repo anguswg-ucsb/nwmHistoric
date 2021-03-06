@@ -78,48 +78,12 @@ dateRangeInput("dateTS", label = "Date Range Input",
                weekstart = 1)
 verbatimTextOutput("dateTSText")
 verbatimTextOutput("dateTSText2")
-htmlOutput("areaTable")
+tableOutput("summaryTable")
 ```
 
 ### **Submit**
 ```{r}
 shiny::actionButton("dateButton", label = "Enter", icon("search"))
-```
-
-```{r context = "server"}
-# observeEvent(input$catchTS_date_window, {
-#   start <- as.Date(ymd_hms(input$catchTS_date_window[[1]]))
-#   stop  <- as.Date(ymd_hms(input$catchTS_date_window[[2]]))
-#   updateDateRangeInput(session = session,
-#                        inputId = "dateTS",
-#                        start = start,end = stop
-#                        )
-# })
-
-# update_range <- eventReactive(input$dateButton, {
-#       range <- paste(input$dateTS[1], input$dateTS[2], sep = "/")
-#       return(ts[range])
-#     })
-
-# observeEvent(input$dateButton, {
-#   
-#     nwm <- readNWMdata(comid = comid)
-#     ts = xts::xts(as.data.frame(nwm <- nwm$flow_cms), order.by = nwm <- nwm$dateTime, tz= 'UTC')
-#       
-# 
-#     
-#     
-#     output$catchTS <- renderDygraph({
-# 
-#       dygraph(update_range)  %>%
-#         dyHighlight(highlightCircleSize = 2,
-#                 highlightSeriesBackgroundAlpha = .3) %>%
-#         dyOptions(colors = c("darkcyan"),
-#               fillGraph = TRUE) %>%
-#         dyRangeSelector(dateWindow = c(as.character(input$dateTS[1]), as.character(input$dateTS[2])))
-#     })
-#   
-# })
 ```
 
 Column {data-width=550}
@@ -168,8 +132,7 @@ dygraphOutput("catchTS")
     
     output$comidBox <- renderValueBox({
     valueBox(value = paste("COMID: ", comid),
-      icon = "fa-water",
-      color = "primary") })
+      icon = "fa-water") })
     
     bounds <- st_bbox(pt) %>% 
       st_as_sfc() %>% 
@@ -183,8 +146,8 @@ dygraphOutput("catchTS")
       addMarkers(data = pt,
                  layerId = ~comid) %>% 
        addPolygons( data = catch_df,
-                   fillColor = 'red',
-                   col = "black",
+                   fillColor = 'pink',
+                   col = "white",
                    weight = 2) %>% 
       flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
@@ -197,12 +160,12 @@ dygraphOutput("catchTS")
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   fillColor = 'red',
-                   col = "black",
+                   fillColor = 'pink',
+                   col = "white",
                    weight = 2) %>%
       addPolygons( data = catch_df2,
-                   fillColor = 'lightgrey',
-                   col = "black",
+                   fillColor = 'transparent',
+                   col = "white",
                    weight = 2) %>% 
       flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
@@ -248,8 +211,7 @@ observeEvent(input$catchMap2_click, {
     
     output$comidBox <- renderValueBox({
     valueBox(value = paste("COMID: ", comid),
-      icon = "fa-id-badge",
-      color = "primary") })
+      icon = "fa-water") })
     
     bounds <- st_bbox(pt) %>% 
       st_as_sfc() %>% 
@@ -263,8 +225,8 @@ observeEvent(input$catchMap2_click, {
       addMarkers(data = pt,
                  layerId = ~comid,) %>% 
       addPolygons( data = catch_df,
-                   fillColor = 'red',
-                   col = "black",
+                   fillColor = 'pink',
+                   col = "white",
                    weight = 2) %>% 
       flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
@@ -276,12 +238,12 @@ observeEvent(input$catchMap2_click, {
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   fillColor = 'red',
-                   col = "black",
+                   fillColor = 'pink',
+                   col = "white",
                    weight = 2) %>% 
       addPolygons( data = catch_df2,
-                   fillColor = "grey",
-                   col = "black",
+                   fillColor = "transparent",
+                   col = "white",
                    weight = 2)
    } 
 })
@@ -512,6 +474,15 @@ tempData <- eventReactive(input$dateButton, {
 output$tempGraph <- renderHighchart({
         tempData()
       })
+
+summaryData <- eventReactive(input$dateButton, {
+  make_table3(comid)
+})
+
+output$summaryTable <- renderText({ 
+      summaryData()
+  })
+    
 ```
 
 

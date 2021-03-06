@@ -31,6 +31,126 @@
 # nldi <- findNLDI(location = pt)
 # centroid <- st_centroid(nldi)
 # 
+# nwm <- readNWMdata(comid = 17595443)
+# 
+# max_flow <- nwm %>% 
+#   mutate(days = as.Date(dateTime)) %>% 
+#   group_by(days) %>% 
+#   summarize(total_flows = sum(flow_cms)) %>% 
+#   arrange(-total_flows) %>% 
+#   slice(n =1)
+# 
+# min_flow <- nwm %>% 
+#   mutate(days = as.Date(dateTime)) %>% 
+#   group_by(days) %>% 
+#   summarize(total_flows = sum(flow_cms)) %>% 
+#   arrange(total_flows) %>% 
+#   slice(n =1)
+make_table <- function(comid) {
+  nwm <- readNWMdata(comid = comid)
+  nwm$flow_cms <- round(nwm$flow_cms, 2)
+  nwm <- head(nwm, 300)
+  nwm <- rename(nwm, Date = "dateTime",
+                "Flow rate (C/m/s)" = "flow_cms",
+                COMID = comid,
+                Model = model)
+  as.datatable(formattable(tmp2, align = c("l", rep("r", NCOL(tmp2) - 1)),
+                           list(`Model` = formatter("span", style = ~ style(font.weight = "bold")),
+                                # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
+                                `COMID` = color_bar("honeydew"),
+                                `Date` = formatter("span", style = ~ style(font.weight = "bold")),
+                                `Flow rate (C/m/s)` = color_tile("azure1", "cadetblue4"))),
+               options = list(paging = TRUE, searching = TRUE))
+  
+}
+
+make_table3 <- function(comid) {
+  catch_df <- get_nhdplus(comid = comid, realization = c("catchment", "flowline"))
+  catch_df <- bind_rows(catch_df) %>% 
+    select(1:3, 5:7, 13, 53:55)
+  catch_df <- catch_df %>% 
+    mutate(str_length = lengthkm[2], max_elev = maxelevsmo[2], min_elev = minelevsmo[2], slope2 = slope[2]) %>% 
+    slice(n = 1) %>% 
+    select(1:6, 11:14)
+  conus <- USAboundaries::us_counties() %>% 
+    select(name, state_name)
+  tmp1 <- st_intersection(catch_df, conus) %>% 
+    st_drop_geometry()
+  tmp1$areasqkm <- round(tmp1$areasqkm, 2)
+  tmp1$str_length <- round(tmp1$str_length, 2)
+  tmp1$slope <- round(tmp1$slope, 2)
+  
+  tmp2 <- tmp1 %>% 
+    select(COMID = featureid,
+           State = state_name,
+           County = name,
+           areasqkm,
+           str_length, 
+           max_elev,
+           min_elev,
+           slope) %>% 
+    slice(n=1) %>%
+    mutate(across(1:8, as.character)) %>%
+    tidyr::pivot_longer(1:8, names_to = "tag", values_to = "vals")
+  
+  nwm <- readNWMdata(comid = 101)
+  
+  max_flow <- nwm %>% 
+    mutate(max_date = as.Date(dateTime)) %>% 
+    group_by(max_date) %>% 
+    summarize(maxflow = sum(flow_cms)) %>% 
+    arrange(-maxflow) %>% 
+    slice(n = 1)
+  max_flow$maxflow <- round(max_flow$maxflow, 2)
+  
+  max_flow <- nwm %>%  
+    arrange(-flow_cms) %>% 
+    slice(n = 1) %>% 
+    rename(maxflow = flow_cms)
+  max_flow$maxflow <- round(max_flow$maxflow, 2)
+  
+  max_flow <- max_flow %>% 
+    mutate(across(1:2, as.character)) %>%
+    tidyr::pivot_longer(1:2, names_to = "tag", values_to = "vals") 
+  
+  min_flow <- nwm %>% 
+    mutate(min_date = as.Date(dateTime)) %>% 
+    group_by(min_date) %>% 
+    summarize(minflow = sum(flow_cms)) %>% 
+    arrange(minflow) %>% 
+    slice(n =1)
+  
+  min_flow$minflow <- round(min_flow$minflow, 2)
+  
+  min_flow <- min_flow %>% 
+    mutate(across(1:2, as.character)) %>%
+    tidyr::pivot_longer(1:2, names_to = "tag", values_to = "vals") 
+  
+  
+  tmp2 <- bind_rows(tmp2, max_flow)
+  tmp2 <- bind_rows(tmp2, min_flow)
+  
+  knitr::kable(tmp2, col.names = c('', " "), booktabs= T,
+               table.attr ='class="table" style="color: black"', escape = F, align = "c") %>%
+    kableExtra::kable_classic("striped") %>% 
+    # kableExtra::kable_material(c("striped", "hover")) %>% 
+    kableExtra::kable_styling(position = "center") %>% 
+    kableExtra::column_spec(1, background = "#BCD4E6") %>% 
+    kableExtra::column_spec(2, background = "azure")
+  # formattable(tmp2, align = c("l", rep("r", NCOL(tmp2) - 1)),
+  #                          list(`tag` = formatter("span", style = ~ style(font.weight = "bold")),
+  #                               # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
+  #                               # `vals` = color_bar("honeydew")),
+  #                               `vals` = formatter("span", style = ~ style(font.weight = "bold"))))
+                                # `Flow rate (C/m/s)` = color_tile("azure1", "cadetblue4"))),
+               # options = list(paging = TRUE, searching = TRUE))
+ 
+   # formattable(tmp2, align = c("l", rep("r", NCOL(tmp2) - 1)),
+   #            list(`tag` = formatter("span", style = ~ style(font.weight = "bold")),
+   #                 # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
+   #                 `vals` = color_bar("honeydew")))
+}
+
 # param_meta$terraclim
 # # 
 # temp <- climateR::getTerraClim(AOI = centroid, param = c("tmax", "tmin"),
