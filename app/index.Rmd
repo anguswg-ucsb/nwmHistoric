@@ -63,9 +63,17 @@ Inputs {.sidebar}
 
 ### Model Filters
 ```{r}
+
+# div(style = "height: 1000px; width: 80%; margin: 0; padding: 0; background-color: rgba(0,0,0,.4)",
+#       div(style = "height: 100%; width: 100%; margin: 0; padding: 0",
+#           highchartOutput("Result",  width = "100%", height = "160%")))
+        #     withLoader(type = "html", loader = "loader6")
+        # ))
 dateRangeInput("dateTS", label = "Date Range Input",
                start = "1993-01-01",
                end = "2018-12-31",
+               min = "1993-01-01",
+               max = "2018-12-31",
                format = "yyyy mm dd",
                weekstart = 1)
 verbatimTextOutput("dateTSText")
@@ -114,7 +122,7 @@ shiny::actionButton("dateButton", label = "Enter", icon("search"))
 # })
 ```
 
-Column {data-width=550} {.tabset}
+Column {data-width=550}
 -----------------------------------------------------------------------
 ### 
 ```{r}
@@ -293,20 +301,21 @@ observeEvent(input$catchMap2_click, {
 
 Column {data-width=350}
 -----------------------------------------------------------------------
-### Climate 
-```{r, fig.height=300}
-# {.tabset data-width=400}
-tabsetPanel(type = "tabs",
-            tabPanel("Precipitation", highchartOutput('precipGraph', height = "100%")),
-            tabPanel("Monthly flows", highchartOutput("catchAggGraph", height = "100%")),
-            tabPanel("Temperature" , highchartOutput("tempGraph", height = "100%")),
-            tabPanel("Water use", highchartOutput("waterUseGraph", height = "100%")))
-# highchartOutput("tempGraph")
-```
-
 ### Map 2 
 ```{r, fig.height=500}
 leafletOutput("catchMap2")
+```
+
+### Climate 
+```{r, fig.height=350}
+# {.tabset data-width=400}
+tabsetPanel(type = "tabs",
+            tabPanel("Precipitation", highchartOutput ('precipGraph')),
+            tabPanel("Monthly flows", highchartOutput("catchAggGraph")),
+            tabPanel("Temperature" , highchartOutput("tempGraph")),
+            tabPanel("Water use", highchartOutput("waterUseGraph")))
+
+# highchartOutput("tempGraph")
 ```
 
 ```{r context = "server"}
@@ -414,7 +423,8 @@ aggPlot <- eventReactive(input$dateButton, {
         agg <- nwmHistoric::aggregate_ym(nwm)
     
       hchart(agg, type = "column", hcaes(x = ym, y = flow_cms)) %>%
-        hc_colors(c("red", "green", "blue", "grey", "orange"))
+        hc_colors(c("red", "green", "blue", "grey", "orange")) %>% 
+        hc_size(height = 450)
     })
 
 # Render monthly flow totals plot after action button is clicked 
@@ -434,7 +444,8 @@ countyData <- eventReactive(input$dateButton, {
       slice(n =1)
     df = water_use_data(tmp1$state_name, tmp1$name)
     hchart(df, type = "column", hcaes(x = year, y = withdrawals, group = "sector")) %>%
-      hc_colors(c("red", "green", "grey", "blue", "orange"))
+      hc_colors(c("red", "green", "grey", "blue", "orange")) %>% 
+      hc_size(height = 450)
   })
 
 # Render water use plot after action button is clicked 
@@ -464,7 +475,8 @@ precipData <- eventReactive(input$dateButton, {
                     hcaes(x = date, y = prcp), yAxis = 1 ) %>%
       hc_add_series(terra, type = "line",
                     hcaes(x = date, y = aet), yAxis = 0) %>%
-      hc_colors(c("darkcyan", "darkred"))
+      hc_colors(c("darkcyan", "darkred")) %>% 
+      hc_size(height = 450)
 
     })
 
@@ -491,7 +503,8 @@ tempData <- eventReactive(input$dateButton, {
     highchart() %>%
       hc_add_series(temp, type = "column", hcaes(x = month, y = meanMax)) %>%
       hc_add_series(temp, type = "column", hcaes(x = month, y = meanMin)) %>%
-      hc_colors(c("darkcyan", "darkred"))
+      hc_colors(c("darkcyan", "darkred")) %>% 
+      hc_size(height = 450)
 
 
     })
