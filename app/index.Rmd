@@ -78,7 +78,7 @@ dateRangeInput("dateTS", label = "Date Range Input",
                weekstart = 1)
 verbatimTextOutput("dateTSText")
 verbatimTextOutput("dateTSText2")
-tableOutput("summaryTable")
+gt_output("summaryTable")
 ```
 
 ### **Submit**
@@ -479,7 +479,7 @@ summaryData <- eventReactive(input$dateButton, {
   make_table3(comid)
 })
 
-output$summaryTable <- renderText({ 
+output$summaryTable <- render_gt({ 
       summaryData()
   })
     

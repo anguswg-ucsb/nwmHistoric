@@ -17,20 +17,60 @@
 # library(formattable)
 
 
+devtools::install_github("rstudio/gt")
+
+library(gt)
 
 
 # library(climateR)
 
 ### TEST POINT FOR CLIMATE DATA ####
-# lat = 35.6643
-# lng = -96.91935
-# pt <- data.frame(lat, lng)
-# pt <- sf::st_as_sf(pt,
-#                    coords = c("lng", "lat"),
-#                    crs = 4326)
-# nldi <- findNLDI(location = pt)
-# centroid <- st_centroid(nldi)
-# 
+lat = 35.6643
+lng = -96.91935
+pt <- data.frame(lat, lng)
+pt <- sf::st_as_sf(pt,
+                   coords = c("lng", "lat"),
+                   crs = 4326)
+nldi <- findNLDI(location = pt)
+nldi <- st_centroid(nldi)
+
+evap <- climateR::getTerraClim(AOI = nldi, param = "aet",
+                                startDate = "1993-01-01",
+                                endDate = "2015-01-01")
+
+
+
+# evap2$date <- zoo::as.yearmon(evap2$date,"%Y-%m")
+# evap2$date <- as.Date(paste0(evap2$date, "-01"))
+
+evap$date <- paste0(evap$date, "-01")
+evap$date <- as.Date(evap$date)
+
+rownames(evap) <- evap$date
+
+evap <- select(evap,aet)
+
+
+
+dygraph(data = evap)
+       
+
+highchart() %>%
+  hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
+                          min=0,
+                          max = max(terra$prcp),
+                          showFirstLabel = TRUE,
+                          showLastLabel = TRUE,
+                          opposite = FALSE),
+                     list(title = list(text = "Actual Evapotranspiration (mm)"),
+                          showLastLabel=FALSE,
+                          opposite = TRUE)) %>%
+  hc_add_series(terra, type = "column",
+                hcaes(x = date, y = prcp), yAxis = 1 ) %>%
+  hc_add_series(terra, type = "line",
+                hcaes(x = date, y = aet), yAxis = 0) %>%
+  hc_colors(c("darkcyan", "darkred")) %>% 
+  hc_size(height = 450)
 # nwm <- readNWMdata(comid = 17595443)
 # 
 # max_flow <- nwm %>% 
@@ -65,7 +105,7 @@ make_table <- function(comid) {
 }
 
 make_table3 <- function(comid) {
-  catch_df <- get_nhdplus(comid = comid, realization = c("catchment", "flowline"))
+  catch_df <- get_nhdplus(comid = 101, realization = c("catchment", "flowline"))
   catch_df <- bind_rows(catch_df) %>% 
     select(1:3, 5:7, 13, 53:55)
   catch_df <- catch_df %>% 
@@ -84,43 +124,52 @@ make_table3 <- function(comid) {
     select(COMID = featureid,
            State = state_name,
            County = name,
-           areasqkm,
-           str_length, 
-           max_elev,
-           min_elev,
-           slope) %>% 
+           "Area (sq. km)" = areasqkm,
+           Length = str_length,
+           "Max elevation" = max_elev,
+           "Min elevation" = min_elev) %>% 
     slice(n=1) %>%
-    mutate(across(1:8, as.character)) %>%
-    tidyr::pivot_longer(1:8, names_to = "tag", values_to = "vals")
+    mutate(across(1:7, as.character)) %>%
+    tidyr::pivot_longer(1:7, names_to = "tag", values_to = "vals")
   
-  nwm <- readNWMdata(comid = 101)
-  
-  max_flow <- nwm %>% 
-    mutate(max_date = as.Date(dateTime)) %>% 
-    group_by(max_date) %>% 
-    summarize(maxflow = sum(flow_cms)) %>% 
-    arrange(-maxflow) %>% 
-    slice(n = 1)
-  max_flow$maxflow <- round(max_flow$maxflow, 2)
+  nwm <- readNWMdata(comid = comid)
   
   max_flow <- nwm %>%  
     arrange(-flow_cms) %>% 
     slice(n = 1) %>% 
-    rename(maxflow = flow_cms)
+    rename(maxflow = flow_cms) %>% 
+    select(date_max = dateTime, maxflow)
   max_flow$maxflow <- round(max_flow$maxflow, 2)
   
+  max_flow$date_max <- as.Date(max_flow$date_max)
+  
+  max_flow <- max_flow %>% 
+    rename("Date max flow" = date_max)
+  max_flow <- max_flow %>% 
+    rename("Max flow rate" = maxflow)
+ 
   max_flow <- max_flow %>% 
     mutate(across(1:2, as.character)) %>%
     tidyr::pivot_longer(1:2, names_to = "tag", values_to = "vals") 
   
-  min_flow <- nwm %>% 
-    mutate(min_date = as.Date(dateTime)) %>% 
-    group_by(min_date) %>% 
-    summarize(minflow = sum(flow_cms)) %>% 
-    arrange(minflow) %>% 
-    slice(n =1)
+  min_flow <- nwm %>%  
+    arrange(flow_cms) %>% 
+    slice(n = 1) %>% 
+    rename(minflow = flow_cms) %>% 
+    select(date_min = dateTime, minflow)
+  min_flow$minflow <- round(min_flow$minflow, 2)
+  
+  min_flow$date_min <- as.Date(min_flow$date_min)
+  # min_flow <- nwm %>% 
+  #   mutate(min_date = as.Date(dateTime)) %>% 
+  #   group_by(min_date) %>% 
+  #   summarize(min_flow = sum(flow_cms)) %>% 
+  #   arrange(minflow) %>% 
+  #   slice(n =1)
   
   min_flow$minflow <- round(min_flow$minflow, 2)
+  
+  min_flow <- rename(min_flow, "Min flow rate" = minflow, "Date min flow" = date_min,)
   
   min_flow <- min_flow %>% 
     mutate(across(1:2, as.character)) %>%
@@ -130,13 +179,29 @@ make_table3 <- function(comid) {
   tmp2 <- bind_rows(tmp2, max_flow)
   tmp2 <- bind_rows(tmp2, min_flow)
   
-  knitr::kable(tmp2, col.names = c('', " "), booktabs= T,
-               table.attr ='class="table" style="color: black"', escape = F, align = "c") %>%
-    kableExtra::kable_classic("striped") %>% 
-    # kableExtra::kable_material(c("striped", "hover")) %>% 
-    kableExtra::kable_styling(position = "center") %>% 
-    kableExtra::column_spec(1, background = "#BCD4E6") %>% 
-    kableExtra::column_spec(2, background = "azure")
+
+  gt::gt(tmp2, rowname_col = "tag") %>%
+    tab_stubhead(label = "") %>%
+    # tab_spanner(label = "COMID", columns = vars(tag, vals)) %>% 
+    tab_header(
+      title = "Summary"
+    )  %>%
+    cols_align("right") %>% 
+    cols_label(
+      vals = " "
+    ) 
+      
+}
+
+
+  # 
+  # knitr::kable(tmp2, col.names = c('', " "), booktabs= T,
+  #              table.attr ='class="table" style="color: black"', escape = F, align = "c") %>%
+  #   kableExtra::kable_classic("striped") %>% 
+  #   # kableExtra::kable_material(c("striped", "hover")) %>% 
+  #   kableExtra::kable_styling(position = "center") %>% 
+  #   kableExtra::column_spec(1, background = "#BCD4E6") %>% 
+  #   kableExtra::column_spec(2, background = "azure")
   # formattable(tmp2, align = c("l", rep("r", NCOL(tmp2) - 1)),
   #                          list(`tag` = formatter("span", style = ~ style(font.weight = "bold")),
   #                               # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
@@ -149,7 +214,7 @@ make_table3 <- function(comid) {
    #            list(`tag` = formatter("span", style = ~ style(font.weight = "bold")),
    #                 # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
    #                 `vals` = color_bar("honeydew")))
-}
+
 
 # param_meta$terraclim
 # # 
