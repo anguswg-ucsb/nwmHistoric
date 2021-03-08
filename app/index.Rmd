@@ -6,8 +6,8 @@ output:
     navbar:
       - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
     theme: cerulean
-    orientation: columns
-    vertical_layout: fill
+    orientation: rows
+    vertical_layout: scroll
 ---
 
 ```{r setup, include = FALSE}
@@ -28,8 +28,7 @@ library(ggplot2)
 library(dplyr)
 library(dygraphs)
 library(highcharter)
-library(DT)
-library(formattable)
+# library(gt)
 
 
 source('helper2.R')
@@ -78,7 +77,7 @@ dateRangeInput("dateTS", label = "Date Range Input",
                weekstart = 1)
 verbatimTextOutput("dateTSText")
 verbatimTextOutput("dateTSText2")
-gt_output("summaryTable")
+htmlOutput("summaryTable")
 ```
 
 ### **Submit**
@@ -86,22 +85,25 @@ gt_output("summaryTable")
 shiny::actionButton("dateButton", label = "Enter", icon("search"))
 ```
 
-Column {data-width=550}
+Row
 -----------------------------------------------------------------------
 ### 
 ```{r}
 valueBoxOutput("comidBox")
 ```
 
-### Draw 
+Row
+-----------------------------------------------------------------------
+### Map1 
 ```{r}
 # fig.width = 550
 leafletOutput("catchMap")
 ```
 
-### Time series 
+### Map2 
 ```{r}
-dygraphOutput("catchTS")
+# fig.width = 550
+leafletOutput("catchMap2")
 ```
 
 ```{r context = "server"}
@@ -261,24 +263,49 @@ observeEvent(input$catchMap2_click, {
 })
 ```
 
-Column {data-width=350}
+Row
 -----------------------------------------------------------------------
-### Map 2 
-```{r, fig.height=500}
-leafletOutput("catchMap2")
+### Time series 
+```{r}
+dygraphOutput("catchTS")
 ```
 
-### Climate 
-```{r, fig.height=350}
+### Monthly
+```{r}
+highchartOutput("catchAggGraph")
+```
+
+Row {.tabset}
+-----------------------------------------------------------------------
+### Temp
+```{r}
 # {.tabset data-width=400}
-tabsetPanel(type = "tabs",
-            tabPanel("Precipitation", highchartOutput ('precipGraph')),
-            tabPanel("Monthly flows", highchartOutput("catchAggGraph")),
-            tabPanel("Temperature" , highchartOutput("tempGraph")),
-            tabPanel("Water use", highchartOutput("waterUseGraph")))
+# fillRow(flex = c(NA, 1),
+# tabsetPanel(type = "tabs",
+#             tabPanel("Precipitation", dygraphOutput ('precipGraph')),
+#             tabPanel("Evaporation", dygraphOutput("evapGraph")),
+#             tabPanel("Monthly flows", highchartOutput("catchAggGraph")),
+#             tabPanel("Temperature" , highchartOutput("tempGraph")),
+#             tabPanel("Water use", highchartOutput("waterUseGraph")))
 
-# highchartOutput("tempGraph")
+highchartOutput("tempGraph")
 ```
+
+### Precip
+```{r}
+dygraphOutput ('precipGraph')
+```
+
+### Evap
+```{r}
+dygraphOutput("evapGraph")
+```
+
+### Water use
+```{r}
+highchartOutput("waterUseGraph")
+```
+
 
 ```{r context = "server"}
 # testing reactivity with date range input & button
@@ -286,7 +313,7 @@ dateTSText <- eventReactive(input$dateButton, {
   paste0("'", as.character(input$dateTS[1]), "/", as.character(input$dateTS[2]), "'")
  
   })
-  
+
   output$dateTSText <- renderText({
    dateTSText()
   })
@@ -420,33 +447,94 @@ precipData <- eventReactive(input$dateButton, {
   
     nldi <- findNLDI(comid = comid) %>% 
       st_centroid()
-    terra <- climateR::getTerraClim(AOI = nldi, param = c("prcp", "aet"),
-                       startDate = "1993-01-01",
-                       endDate = "2015-01-01")
-    highchart() %>%
-      hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
-                            min=0,
-                            max = max(terra$prcp),
-                            showFirstLabel = TRUE,
-                            showLastLabel = TRUE,
-                            opposite = FALSE),
-                         list(title = list(text = "Actual Evapotranspiration (mm)"),
-                            showLastLabel=FALSE,
-                            opposite = TRUE)) %>%
-      hc_add_series(terra, type = "column",
-                    hcaes(x = date, y = prcp), yAxis = 1 ) %>%
-      hc_add_series(terra, type = "line",
-                    hcaes(x = date, y = aet), yAxis = 0) %>%
-      hc_colors(c("darkcyan", "darkred")) %>% 
-      hc_size(height = 450)
+    precip <- climateR::getTerraClim(AOI = nldi, param = "prcp",
+                                startDate = "1993-01-01",
+                                endDate = "2015-01-01")
+
+    precip$date <- paste0(precip$date, "-01")
+    precip$date <- as.Date(precip$date)
+    rownames(precip) <- precip$date
+    precip <- select(precip, prcp)
+
+    dygraph(data = precip,
+            main = "Precipitation",
+            ylab = "Precipitation (mm)",
+            xlab = "Date") %>% 
+      dyHighlight(highlightCircleSize = 2,
+                highlightSeriesBackgroundAlpha = .3) %>%
+          dyOptions(colors = c("darkcyan"),
+              fillGraph = TRUE) 
+    # terra <- climateR::getTerraClim(AOI = nldi, param = c("prcp", "aet"),
+    #                    startDate = "1993-01-01",
+    #                    endDate = "2015-01-01")
+    # highchart() %>%
+    #   hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
+    #                         min=0,
+    #                         max = max(terra$prcp),
+    #                         showFirstLabel = TRUE,
+    #                         showLastLabel = TRUE,
+    #                         opposite = FALSE),
+    #                      list(title = list(text = "Actual Evapotranspiration (mm)"),
+    #                         showLastLabel=FALSE,
+    #                         opposite = TRUE)) %>%
+    #   hc_add_series(terra, type = "column",
+    #                 hcaes(x = date, y = prcp), yAxis = 1 ) %>%
+    #   hc_add_series(terra, type = "line",
+    #                 hcaes(x = date, y = aet), yAxis = 0) %>%
+    #   hc_colors(c("darkcyan", "darkred")) %>% 
+    #   hc_size(height = 450)
 
     })
 
 # Render precip/evapo plot after action button is clicked 
-output$precipGraph <- renderHighchart({
+output$precipGraph <- renderDygraph({
         precipData()
       })
+# precip & evapotran data/plot, reactive to input of date button
+evapData <- eventReactive(input$dateButton, {
+  
+    nldi <- findNLDI(comid = comid) %>% 
+      st_centroid()
+    evap <- climateR::getTerraClim(AOI = nldi, param = "aet",
+                                startDate = "1993-01-01",
+                                endDate = "2015-01-01")
 
+    evap$date <- paste0(evap$date, "-01")
+    evap$date <- as.Date(evap$date)
+    rownames(evap) <- evap$date
+    
+    dygraph(data = select(evap,aet),
+            main = "Actual Evapotranspiration",
+            ylab = "Evapotranspiation (mm)",
+            xlab = "Date") %>% 
+      dyHighlight(highlightCircleSize = 2,
+                highlightSeriesBackgroundAlpha = .3) %>%
+          dyOptions(colors = c("darkred"),
+              fillGraph = TRUE)
+    
+    # highchart() %>%
+    #   hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
+    #                         min=0,
+    #                         max = max(terra$prcp),
+    #                         showFirstLabel = TRUE,
+    #                         showLastLabel = TRUE,
+    #                         opposite = FALSE),
+    #                      list(title = list(text = "Actual Evapotranspiration (mm)"),
+    #                         showLastLabel=FALSE,
+    #                         opposite = TRUE)) %>%
+    #   hc_add_series(terra, type = "column",
+    #                 hcaes(x = date, y = prcp), yAxis = 1 ) %>%
+    #   hc_add_series(terra, type = "line",
+    #                 hcaes(x = date, y = aet), yAxis = 0) %>%
+    #   hc_colors(c("darkcyan", "darkred")) %>% 
+    #   hc_size(height = 450)
+
+    })
+
+# Render precip/evapo plot after action button is clicked 
+output$evapGraph <- renderDygraph({
+        evapData()
+      })
 # monthly mean Min and Max temps data/plot, reactive to input of date button
 tempData <- eventReactive(input$dateButton, {
   
@@ -479,7 +567,7 @@ summaryData <- eventReactive(input$dateButton, {
   make_table3(comid)
 })
 
-output$summaryTable <- render_gt({ 
+output$summaryTable <- renderText({ 
       summaryData()
   })
     
