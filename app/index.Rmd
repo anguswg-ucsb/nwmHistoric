@@ -7,7 +7,7 @@ output:
       - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
     theme: cerulean
     orientation: rows
-    vertical_layout: scroll
+    vertical_layout: fill
 ---
 
 ```{r setup, include = FALSE}
@@ -28,6 +28,7 @@ library(ggplot2)
 library(dplyr)
 library(dygraphs)
 library(highcharter)
+library(plotly)
 # library(gt)
 
 
@@ -92,16 +93,17 @@ Row
 valueBoxOutput("comidBox")
 ```
 
-Row
+Row {data-height=650}
 -----------------------------------------------------------------------
+
 ### Map1 
-```{r}
-# fig.width = 550
+```{r, fig.width = 350}
+
 leafletOutput("catchMap")
 ```
 
 ### Map2 
-```{r}
+```{r, fig.width = 250}
 # fig.width = 550
 leafletOutput("catchMap2")
 ```
@@ -148,8 +150,8 @@ leafletOutput("catchMap2")
       addMarkers(data = pt,
                  layerId = ~comid) %>% 
        addPolygons( data = catch_df,
-                   fillColor = 'pink',
-                   col = "white",
+                   fillColor = 'red',
+                   col = "black",
                    weight = 2) %>% 
       flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
@@ -162,7 +164,7 @@ leafletOutput("catchMap2")
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   fillColor = 'pink',
+                   fillColor = 'red',
                    col = "white",
                    weight = 2) %>%
       addPolygons( data = catch_df2,
@@ -227,8 +229,8 @@ observeEvent(input$catchMap2_click, {
       addMarkers(data = pt,
                  layerId = ~comid,) %>% 
       addPolygons( data = catch_df,
-                   fillColor = 'pink',
-                   col = "white",
+                   fillColor = 'red',
+                   col = "black",
                    weight = 2) %>% 
       flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
@@ -240,7 +242,7 @@ observeEvent(input$catchMap2_click, {
       addMarkers(data = pt,
                  layerId = ~comid) %>%
       addPolygons( data = catch_df,
-                   fillColor = 'pink',
+                   fillColor = 'red',
                    col = "white",
                    weight = 2) %>% 
       addPolygons( data = catch_df2,
@@ -263,20 +265,33 @@ observeEvent(input$catchMap2_click, {
 })
 ```
 
+
 Row
 -----------------------------------------------------------------------
+
 ### Time series 
 ```{r}
 dygraphOutput("catchTS")
 ```
 
-### Monthly
-```{r}
-highchartOutput("catchAggGraph")
-```
-
 Row {.tabset}
 -----------------------------------------------------------------------
+
+### Precip
+```{r}
+dygraphOutput ('precipGraph')
+```
+
+### Evap
+```{r}
+dygraphOutput("evapGraph")
+```
+
+### Monthly
+```{r}
+plotlyOutput("catchAggGraph")
+```
+
 ### Temp
 ```{r}
 # {.tabset data-width=400}
@@ -288,17 +303,7 @@ Row {.tabset}
 #             tabPanel("Temperature" , highchartOutput("tempGraph")),
 #             tabPanel("Water use", highchartOutput("waterUseGraph")))
 
-highchartOutput("tempGraph")
-```
-
-### Precip
-```{r}
-dygraphOutput ('precipGraph')
-```
-
-### Evap
-```{r}
-dygraphOutput("evapGraph")
+plotlyOutput("tempGraph")
 ```
 
 ### Water use
@@ -410,21 +415,49 @@ output$catchTS <- renderDygraph({
 aggPlot <- eventReactive(input$dateButton, {
         nwm <-  readNWMdata(comid = comid)
         agg <- nwmHistoric::aggregate_ym(nwm)
+        
+        plot_ly(agg, x = ~ym, y = ~flow_cms, type = 'bar',  
+                textposition = 'auto',
+                marker = list(color = 'rgb(158,202,225)',
+                           line = list(color = 'rgb(8,48,107)', width = 1.5))) %>% 
+                           # layout(xaxis = list(title = "", tickangle = -45),
+          #         yaxis = list(title = ""),
+          #         margin = list(b = 100),
+          #         barmode = 'group')
+               layout(title = 'Monthly flow totals',
+                 xaxis = list(
+                   title = "",
+                   tickfont = list(
+                     size = 14,
+                     color = 'rgb(107, 107, 107)')),
+                 yaxis = list(
+                   title = 'Discharge (cms)',
+                   titlefont = list(
+                     size = 16,
+                     color = 'rgb(107, 107, 107)'),
+                   tickfont = list(
+                     size = 14,
+                     color = 'rgb(107, 107, 107)')))
+})
+        
+        # gg <- ggplot(agg, aes(x = ym, y = flow_cms)) +
+        #   geom_col()
+        # plotly::ggplotly(gg)
+        
+      # hchart(agg, type = "column", hcaes(x = ym, y = flow_cms)) %>%
+      #   hc_colors(c("red", "green", "blue", "grey", "orange")) %>% 
+      #   hc_size(height = 450)
     
-      hchart(agg, type = "column", hcaes(x = ym, y = flow_cms)) %>%
-        hc_colors(c("red", "green", "blue", "grey", "orange")) %>% 
-        hc_size(height = 450)
-    })
 
 # Render monthly flow totals plot after action button is clicked 
-output$catchAggGraph <- renderHighchart({
+output$catchAggGraph <- renderPlotly({
           aggPlot()
         })
 
 # county water use data/plot, reactive to input of date button
 countyData <- eventReactive(input$dateButton, {
 
-    nldi <- findNLDI(comid = comid) %>% 
+    nldi <- findNLDI(comid = 101) %>% 
       st_centroid()
     conus <- USAboundaries::us_counties() %>% 
       select(name, state_name)
@@ -432,9 +465,14 @@ countyData <- eventReactive(input$dateButton, {
       st_drop_geometry() %>% 
       slice(n =1)
     df = water_use_data(tmp1$state_name, tmp1$name)
-    hchart(df, type = "column", hcaes(x = year, y = withdrawals, group = "sector")) %>%
-      hc_colors(c("red", "green", "grey", "blue", "orange")) %>% 
-      hc_size(height = 450)
+    
+    plot_ly(df, x = ~ym, y = ~flow_cms, type = 'bar',  
+                textposition = 'auto',
+                marker = list(color = 'rgb(158,202,225)',
+                           line = list(color = 'rgb(8,48,107)', width = 1.5)))
+    # hchart(df, type = "column", hcaes(x = year, y = withdrawals, group = "sector")) %>%
+    #   hc_colors(c("red", "green", "grey", "blue", "orange")) %>% 
+    #   hc_size(height = 450)
   })
 
 # Render water use plot after action button is clicked 
@@ -546,20 +584,75 @@ tempData <- eventReactive(input$dateButton, {
 
     temp <- temp %>%
       mutate(date = parse_date_time(temp$date, "ym")) %>%
-      mutate(month = month(date), year = year(date)) %>%
+      mutate(month = months(date), year = year(date)) %>%
       group_by(month) %>%
-      mutate(meanMax = mean(tmax), meanMin = mean(tmin))
+      mutate(meanMax = mean(tmax), meanMin = mean(tmin)) 
     
-    highchart() %>%
-      hc_add_series(temp, type = "column", hcaes(x = month, y = meanMax)) %>%
-      hc_add_series(temp, type = "column", hcaes(x = month, y = meanMin)) %>%
-      hc_colors(c("darkcyan", "darkred")) %>% 
-      hc_size(height = 450)
+    temp$meanMax <- round(temp$meanMax, 2)
+    temp$meanMin <- round(temp$meanMin, 2)
+    
+    temp <- temp %>% 
+      mutate(mon_num = month(date)) %>% 
+      group_by(month) %>% 
+      arrange(date) %>% 
+      slice(n = 12) %>% 
+      ungroup() %>% 
+      arrange(date)
+    temp$month
+    temp$month <- factor(temp$month, levels = c("January", "February", "March", 
+                                                  "April", "May", "June","July", "August", 
+                                                  "September", "October","November", "December" ))
+    # ggplot(data = temp2, aes(x =month, y = temperature, fill = min_max)) +
+    #   geom_col()
+      # geom_col(position = position_dodge(3), width = 2.5,  fill = "red")
+    
+    plot_ly(temp, x = ~month, y = ~meanMax, type = 'bar',  
+                  textposition = 'auto',
+                  name = "Max temperature",
+                  marker = list(color = 'rgba(219, 64, 82, 0.7)',
+                              line = list(color = 'rgba(219, 64, 82, 1.0)',
+                              width = 2))) %>% 
+            add_trace(temp, x = ~month,
+                    y = ~meanMin,
+                    type = 'bar',
+                    name = "Min temperature",
+                    marker = list(color = 'rgba(55, 128, 191, 0.7)',
+                                line = list(color = 'rgba(55, 128, 191, 0.7)',
+                                width = 2))) %>% 
+          # layout(xaxis = list(title = "", tickangle = -45),
+          #         yaxis = list(title = ""),
+          #         margin = list(b = 100),
+          #         barmode = 'group')
+            layout(title = 'Monthly mean temperature',
+                 xaxis = list(
+                   title = "",
+                   tickfont = list(
+                     size = 14,
+                     color = 'rgb(107, 107, 107)')),
+                 yaxis = list(
+                   title = 'Degrees (Celsius) ',
+                   titlefont = list(
+                     size = 16,
+                     color = 'rgb(107, 107, 107)'),
+                   tickfont = list(
+                     size = 14,
+                     color = 'rgb(107, 107, 107)')),
+                 legend = list(x = 0, y = 1, bgcolor = 'rgba(255, 255, 255, 0)', bordercolor = 'rgba(255, 255, 255, 0)'),
+                 barmode = 'group',
+                 bargap = 0.2, 
+                 bargroupgap = 0.15)
+
+
+    # highchart() %>%
+    #   hc_add_series(temp, type = "column", hcaes(x = month, y = meanMax)) %>%
+    #   hc_add_series(temp, type = "column", hcaes(x = month, y = meanMin)) %>%
+    #   hc_colors(c("darkcyan", "darkred")) %>% 
+    #   hc_size(height = 450)
 
 
     })
 # Render mean temp plot after action button is clicked 
-output$tempGraph <- renderHighchart({
+output$tempGraph <- renderPlotly({
         tempData()
       })
 
