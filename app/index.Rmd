@@ -1,10 +1,10 @@
 ---
-title: "NWM"
+title: "NOAA"
 runtime: shiny
 output: 
   flexdashboard::flex_dashboard:
     navbar:
-      - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
+      - { icon: "fa-question-circle", href: "https://water.noaa.gov/about/nwm", align: right }
     theme: cerulean
     orientation: rows
     vertical_layout: fill
@@ -55,7 +55,7 @@ nwm <- reactiveValues()
 
 
 
-NWM {data-icon="fa-tint"}
+National Water Model {data-icon="fa-tint"}
 =====================================
 
 Inputs {.sidebar}
@@ -76,8 +76,6 @@ dateRangeInput("dateTS", label = "Date Range Input",
                max = "2018-12-31",
                format = "yyyy mm dd",
                weekstart = 1)
-verbatimTextOutput("dateTSText")
-verbatimTextOutput("dateTSText2")
 htmlOutput("summaryTable")
 ```
 
@@ -96,13 +94,13 @@ valueBoxOutput("comidBox")
 Row {data-height=650}
 -----------------------------------------------------------------------
 
-### Map1 
+###
 ```{r, fig.width = 350}
 
 leafletOutput("catchMap")
 ```
 
-### Map2 
+###
 ```{r, fig.width = 250}
 # fig.width = 550
 leafletOutput("catchMap2")
@@ -277,22 +275,17 @@ dygraphOutput("catchTS")
 Row {.tabset}
 -----------------------------------------------------------------------
 
-### Precip
+### Precipitation
 ```{r}
 dygraphOutput ('precipGraph')
 ```
 
-### Evap
+### Evapotranspiration
 ```{r}
 dygraphOutput("evapGraph")
 ```
 
-### Monthly
-```{r}
-plotlyOutput("catchAggGraph")
-```
-
-### Temp
+### Temperature
 ```{r}
 # {.tabset data-width=400}
 # fillRow(flex = c(NA, 1),
@@ -306,33 +299,15 @@ plotlyOutput("catchAggGraph")
 plotlyOutput("tempGraph")
 ```
 
+### Discharge
+```{r}
+plotlyOutput("catchAggGraph")
+```
+
 ### Water use
 ```{r}
 highchartOutput("waterUseGraph")
 ```
-
-
-```{r context = "server"}
-# testing reactivity with date range input & button
-dateTSText <- eventReactive(input$dateButton, {
-  paste0("'", as.character(input$dateTS[1]), "/", as.character(input$dateTS[2]), "'")
- 
-  })
-
-  output$dateTSText <- renderText({
-   dateTSText()
-  })
-  
-dateTSText2 <- eventReactive(input$dateButton, {
-      range <- paste(input$dateTS[1], input$dateTS[2], sep = "/")
-      print(range)
-    })
-
-  output$dateTSText2 <- renderText({
-   dateTSText2()
-  })
-```
-
 
 ```{r context = "server"}
 

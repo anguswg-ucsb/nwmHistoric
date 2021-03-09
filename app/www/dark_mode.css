@@ -1,23 +1,39 @@
-@import url('https://fonts.googleapis.com/css2?family=Yusei+Magic&display=swap');
-
-body {
-  background-color: black;
-  color: white; /* text color */
+.github-corner:hover .octo-arm {
+    animation: octocat-wave 560ms ease-in-out;
 }
 
-/* Change header text to imported font */
-h2 {
-  font-family: 'Yusei Magic', sans-serif;
+@keyframes octocat-wave {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    20% {
+        transform: rotate(-25deg);
+    }
+
+    40% {
+        transform: rotate(10deg);
+    }
+
+    60% {
+        transform: rotate(-25deg);
+    }
+
+    80% {
+        transform: rotate(10deg);
+    }
+
+    100% {
+        transform: rotate(0deg);
+    }
 }
 
-/* Make text visible on inputs */
-.shiny-input-container {
-  color: #474747;
-}
+@media (max-width: 500px) {
+    .github-corner:hover .octo-arm {
+        animation: none;
+    }
 
-#container {
-  position: relative;
-  width: 60%;
+    .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out;
+    }
 }
-
-.shiny-plot-output{height:100vh !important;}

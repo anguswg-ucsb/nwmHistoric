@@ -208,25 +208,6 @@ knitr::kable(tmp2, col.names = c('', " "), booktabs= T,
    #                 `vals` = color_bar("honeydew")))
 
 
-# param_meta$terraclim
-# # 
-# temp <- climateR::getTerraClim(AOI = centroid, param = c("tmax", "tmin"),
-#                        startDate = "1993-01-01",
-#                        endDate = "2014-12-31")
-# df = parse_date_time(temp$date,)
-# temp2 <- temp %>%
-#   mutate(date = parse_date_time(temp$date, "ym")) %>%
-#   mutate(month = month(date), year = year(date)) %>%
-#   group_by(month) %>%
-#   mutate(meanMax = mean(tmax), meanMin = mean(tmin))
-#   group_by(month, year) %>%
-#   summarise(total = sum(value))
-# #   
-# highchart() %>%
-#   hc_add_series(temp2, type = "column", hcaes(x = month, y = meanMax)) %>%
-#   hc_add_series(temp2, type = "column", hcaes(x = month, y = meanMin)) %>%
-#   hc_colors(c("darkcyan", "darkred"))
-
 
 #  hchart(type = "line", hcaes(x = date, y = aet)) %>%
 #   hc_colors(c("darkcyan")) %>%
@@ -362,32 +343,6 @@ pop_map <- function(pop_df) {
                 opacity = 1) %>%
     leafem::addMouseCoordinates()
 }
-
-
-# pop <- get_acs(geography = "county",
-#                      variables = "B01003_001",
-#                      geometry = TRUE)
-# 
-# pop$area <- st_area(pop)
-# 
-# pop$area <- units::set_units(pop$area, "mi^2")
-# pop <- rename(pop, population = estimate)
-# pop <- pop %>%
-#   mutate(pop_density = population/area)
-# pop <- pop %>% filter(!grepl("^02", GEOID))
-# pop <- pop %>% filter(!grepl("^15", GEOID))
-# pop <- st_transform(pop, 4326)
-# 
-# #intersect clicked catchment with county polygons
-# nldi <- findNLDI(location = pt) %>% 
-#   st_transform(5070)
-# buff <- st_buffer(nldi, 50000) %>% 
-#   st_transform(4326)
-# overlap_counties <- st_filter(pop, buff, .predicate = st_intersects)
-# 
-# # Pop density leaflet
-# pal <- colorQuantile(palette = "viridis", domain = pop$pop_density, n = 10)
-
 
 
 make_ts <- function(comid) {

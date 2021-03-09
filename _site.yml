@@ -10,6 +10,8 @@ output:
     navbar:
       - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
     theme: cerulean
-    orientation: columns
+    orientation: rows
     vertical_layout: fill
+    includes:
+      in_header: header.html
 ---
