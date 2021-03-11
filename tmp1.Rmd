@@ -1,0 +1,521 @@
+---
+title: "NWM"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    navbar:
+      - { icon: "fa-question-circle", href: "https://ufokn.com/", align: right }
+    theme: flatly
+    orientation: row
+    vertical_layout: fill
+---
+
+```{r setup, include = FALSE}
+library(shiny)
+library(flexdashboard)
+library(shinycustomloader)
+
+library(dataRetrieval)
+library(nhdplusTools)
+library(nwmHistoric)
+library(climateR)
+
+library(lubridate)
+
+library(leaflet)
+library(sf)
+library(ggplot2)
+library(dplyr)
+library(dygraphs)
+library(highcharter)
+library(DT)
+library(formattable)
+
+
+source('helper2.R')
+```
+
+```{r context="server"}
+#Initialize Maps 
+output$catchMap     <- renderLeaflet({ basemap() })
+output$catchMap2     <- renderLeaflet({ second_map() })
+output$catchMap3 <- renderLeaflet({ basemap() })
+# output$countyMap <- renderLeaflet({ pop_map(pop) })
+
+# comid <<- reactiveValues(comid = NULL)
+
+comid <- reactive({
+    comid <-  input$catchMap_click
+    comid <-  input$catchMap2_click
+    comid <-  input$catchMap3_click
+})
+
+nwm <- reactiveValues()
+```
+
+
+
+NWM {data-icon="fa-tint"}
+=====================================
+
+Inputs {.sidebar}
+-------------------------------------
+
+### Model Filters
+```{r}
+dateRangeInput("dateTS", label = "Date Range Input",
+               start = "1993-01-01",
+               end = "2018-12-31",
+               format = "yyyy mm dd",
+               weekstart = 1)
+verbatimTextOutput("dateTSText")
+verbatimTextOutput("dateTSText2")
+htmlOutput("areaTable")
+```
+
+### **Submit**
+```{r}
+shiny::actionButton("dateButton", label = "Enter", icon("search"))
+```
+
+```{r context = "server"}
+# observeEvent(input$catchTS_date_window, {
+#   start <- as.Date(ymd_hms(input$catchTS_date_window[[1]]))
+#   stop  <- as.Date(ymd_hms(input$catchTS_date_window[[2]]))
+#   updateDateRangeInput(session = session,
+#                        inputId = "dateTS",
+#                        start = start,end = stop
+#                        )
+# })
+
+# update_range <- eventReactive(input$dateButton, {
+#       range <- paste(input$dateTS[1], input$dateTS[2], sep = "/")
+#       return(ts[range])
+#     })
+
+# observeEvent(input$dateButton, {
+#   
+#     nwm <- readNWMdata(comid = comid)
+#     ts = xts::xts(as.data.frame(nwm <- nwm$flow_cms), order.by = nwm <- nwm$dateTime, tz= 'UTC')
+#       
+# 
+#     
+#     
+#     output$catchTS <- renderDygraph({
+# 
+#       dygraph(update_range)  %>%
+#         dyHighlight(highlightCircleSize = 2,
+#                 highlightSeriesBackgroundAlpha = .3) %>%
+#         dyOptions(colors = c("darkcyan"),
+#               fillGraph = TRUE) %>%
+#         dyRangeSelector(dateWindow = c(as.character(input$dateTS[1]), as.character(input$dateTS[2])))
+#     })
+#   
+# })
+```
+
+Row 
+-----------------------------------------------------------------------
+### 
+```{r}
+valueBoxOutput("comidBox")
+```
+
+Row {data-height=650}
+-----------------------------------------------------------------------
+### Draw 
+```{r, fig.width = 550}
+leafletOutput("catchMap")
+```
+
+### Map 2
+```{r, fig.width = 350}
+leafletOutput("catchMap2")
+```
+
+```{r context = "server"}
+# Clicking on map 1 outputs Value boxes on both pages + catchment polygons + Dat table + info panel
+  observeEvent(input$catchMap_click, {
+   if(!is.null(input$catchMap_click)) {
+    click <<- input$catchMap_click %>% 
+      data.frame() %>% 
+      dplyr::select(lat,lng)
+    print(click)
+    pt <- sf::st_as_sf(click, 
+                        coords = c("lng", "lat"), 
+                        crs = 4326)
+    nldi <- findNLDI(location = pt)
+    comid <<- nldi$comid
+    print(comid)
+    print("map1_click")
+    catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    
+    # bb <- st_bbox(nldi) # current bounding box
+    # # bounding box range
+    # xrange <- bb$xmax - bb$xmin # range of x values
+    # yrange <- bb$ymax - bb$ymin # range of y values
+    # # expand bb by 60%
+    # bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
+    # bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
+    # bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
+    # bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
+    # # make bb a sfc
+    # bb <- bb %>%  # take the bounding box ...
+    #     st_as_sfc()
+    # catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
+    # catch_df2 <- catch_df %>%
+    #   filter(featureid == comid)
+    output$comidBox <- renderValueBox({
+    valueBox(value = paste("COMID: ", comid),
+      icon = "fa-water",
+      color = "primary") })
+    leafletProxy("catchMap") %>% 
+      clearMarkers() %>%
+      clearShapes() %>% 
+      addMarkers(data = pt,
+                 layerId = ~comid) %>% 
+       addPolygons( data = catch_df,
+                   col = 'yellow') 
+      # addPolygons( data = catch_df2,
+      #              col = 'red') 
+      # zoom_to_catch(catch_df, comid)
+    
+ 
+    
+    leafletProxy("catchMap2") %>%
+      clearMarkers() %>%
+      clearShapes() %>%
+      addMarkers(data = pt,
+                 layerId = ~comid) %>%
+      addPolygons( data = catch_df,
+                   col = 'yellow') %>% 
+      zoom_to_catch()
+      # flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
+      # addPolygons( data = catch_df2,
+      #              col = 'red')
+   } 
+})
+
+# click on map 2 will render polygon, point on map 1 and 3
+observeEvent(input$catchMap2_click, {
+   if(!is.null(input$catchMap2_click)) {
+    click <<- input$catchMap2_click %>% 
+      data.frame() %>% 
+      dplyr::select(lat,lng)
+    print(click)
+    pt <- sf::st_as_sf(click, 
+                        coords = c("lng", "lat"), 
+                        crs = 4326)
+    nldi <- findNLDI(location = pt)
+    comid = nldi$comid
+    print(comid)
+    print("map2_click")
+    #
+    # catch_df <- get_nhdplus(comid = comid, realization = "catchment")
+    
+    bb <- st_bbox(nldi) # current bounding box
+    # bounding box range
+    xrange <- bb$xmax - bb$xmin # range of x values
+    yrange <- bb$ymax - bb$ymin # range of y values
+    # expand bb by 60%
+    bb[1] <- bb[1] - (0.6 * xrange) # xmin - left
+    bb[3] <- bb[3] + (0.6 * xrange) # xmax - right
+    bb[2] <- bb[2] - (0.6 * yrange) # ymin - bottom
+    bb[4] <- bb[4] + (0.6 * yrange) # ymax - top
+    # make bb a sfc
+    bb <- bb %>%  # take the bounding box ...
+        st_as_sfc()
+    catch_df <- get_nhdplus(AOI = bb, realization = "catchment")
+    catch_df2 <- catch_df %>%
+      filter(featureid == comid)
+    
+    output$comidBox <- renderValueBox({
+    valueBox(value = paste("COMID: ", comid),
+      icon = "fa-id-badge",
+      color = "primary") })
+  
+    leafletProxy("catchMap") %>% 
+      clearMarkers() %>%
+      clearShapes() %>% 
+      addMarkers(data = pt,
+                 layerId = ~comid,) %>% 
+      addPolygons( data = catch_df,
+                   col = 'red') %>% 
+      addPolygons( data = catch_df2,
+                   col = 'yellow')
+      # zoom_to_catch(catch_df, comid)
+    leafletProxy("catchMap2") %>%
+      clearMarkers() %>%
+      clearShapes() %>%
+      addMarkers(data = pt,
+                 layerId = ~comid) %>%
+      addPolygons( data = catch_df,
+                   col = 'red') %>% 
+      addPolygons( data = catch_df2,
+                   col = 'yellow')
+   } 
+})
+
+# catchMap and catchMap2 are linked while zooming
+  observe({ # Observer to respond to zoom / pan of map1 and apply to map2
+    coords <- input$catchMap_center
+    zoom <- input$catchMap_zoom
+    print(coords)
+    print(zoom)
+    if (!is.null(coords)) {
+      leafletProxy("catchMap2") %>%
+        setView(lat = coords$lat, lng = coords$lng, zoom = zoom)
+    }
+})
+```
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+### Time series 
+```{r}
+dygraphOutput("catchTS")
+```
+
+### Long temp mean 
+```{r}
+# tabsetPanel(type = "tabs",
+#             tabPanel("Water use", highchartOutput("waterUseGraph", height = "800px")),
+#             tabPanel("Monthly flows", highchartOutput("catchAggGraph", height = "800px")),
+#             tabPanel("Climate", highchartOutput('precipGraph', height = "800px")),
+#             tabPanel("temp" , highchartOutput("tempGraph", height = "800px")))
+highchartOutput("tempGraph")
+```
+### Climate
+```{r}
+highchartOutput('precipGraph')
+# tabsetPanel(type = "tabs",
+#             tabPanel("Water use", highchartOutput("waterUseGraph")),
+#             tabPanel("Monthly flows", highchartOutput("catchAggGraph")),
+#             tabPanel("Climate", highchartOutput('precipGraph')))
+```
+
+### Monthly Flow Totals
+```{r}
+highchartOutput("catchAggGraph")
+```
+
+### Water use
+```{r}
+highchartOutput("waterUseGraph")
+```
+
+```{r context = "server"}
+# testing reactivity with date range input & button
+dateTSText <- eventReactive(input$dateButton, {
+  paste0("'", as.character(input$dateTS[1]), "/", as.character(input$dateTS[2]), "'")
+ 
+  })
+  
+  output$dateTSText <- renderText({
+   dateTSText()
+  })
+  
+dateTSText2 <- eventReactive(input$dateButton, {
+      range <- paste(input$dateTS[1], input$dateTS[2], sep = "/")
+      print(range)
+    })
+
+  output$dateTSText2 <- renderText({
+   dateTSText2()
+  })
+```
+
+
+```{r context = "server"}
+
+# check if change is triggered by user or by reactivity, dygraph won't update date range input is changed because range selector is used to change dygraph
+
+  r <- reactiveValues(
+    change_datewindow = 0,
+    change_dateTS = 0,
+    change_datewindow_auto = 0,
+    change_dateTS_auto = 0,
+    dateTS = c(start = "1993-01-01",
+               end = "2018-12-31")
+  )
+
+ # dygraph updates if user interacts with range slider 
+  observeEvent(input$catchTS_date_window, {
+    message(crayon::blue("observeEvent_input_catchTS_date_window"))
+    r$change_datewindow <- r$change_datewindow + 1
+    if (r$change_datewindow > r$change_datewindow_auto) {
+
+      r$change_dateTS_auto <- r$change_dateTS_auto + 1
+      r$change_datewindow_auto <- r$change_datewindow
+
+    start <- as.Date(ymd_hms(input$catchTS_date_window[[1]]))
+    stop  <- as.Date(ymd_hms(input$catchTS_date_window[[2]]))
+   updateDateRangeInput(session = session,
+                       inputId = "dateTS",
+                       start = start,end = stop
+                       )
+      
+    } else {
+      if (r$change_datewindow >= 10) {
+        r$change_datewindow_auto <- r$change_datewindow <- 0
+      }
+    }
+  })
+
+  # dygraph updates if date range is inputted
+  observeEvent(input$dateTS, {
+    message("observeEvent_input_dateTS")
+    r$change_dateTS <- r$change_dateTS + 1
+    if (r$change_dateTS > r$change_dateTS_auto) {
+      message("event input_year update")
+
+      r$change_datewindow_auto <- r$change_datewindow_auto + 1
+      r$change_dateTS_auto <- r$change_dateTS
+
+      r$dateTS <- input$dateTS
+
+    } else {
+      if (r$change_dateTS >= 10) {
+        r$change_dateTS_auto <- r$change_dateTS <- 0
+      }
+    }
+  })
+```
+  
+```{r context = "server"}
+
+# Time series plot reactive to input of date button
+catchTSplot <- eventReactive(input$dateButton, {
+    nwm <- readNWMdata(comid = comid)
+    ts = xts::xts(as.data.frame(nwm$flow_cms), order.by =nwm$dateTime, tz= 'UTC')
+    dygraph(ts)  %>%
+          dyHighlight(highlightCircleSize = 2,
+                highlightSeriesBackgroundAlpha = .3) %>%
+          dyOptions(colors = c("darkcyan"),
+              fillGraph = TRUE) %>%
+          dyRangeSelector(dateWindow = c(as.character(r$dateTS[1] + 1),
+                                         as.character(r$dateTS[2] + 1)))
+
+  })
+
+# Render time series after action button is clicked 
+output$catchTS <- renderDygraph({
+        catchTSplot()
+      })
+
+# year-month aggregated flow 
+aggPlot <- eventReactive(input$dateButton, {
+        nwm <-  readNWMdata(comid = comid)
+        agg <- nwmHistoric::aggregate_ym(nwm)
+    
+      hchart(agg, type = "column", hcaes(x = ym, y = flow_cms)) %>%
+        hc_colors(c("red", "green", "blue", "grey", "orange"))
+    })
+
+# Render monthly flow totals after action button is clicked 
+output$catchAggGraph <- renderHighchart({
+          aggPlot()
+        })
+
+  
+countyData <- eventReactive(input$dateButton, {
+
+    nldi <- findNLDI(comid = comid) %>% 
+      st_centroid()
+    conus <- USAboundaries::us_counties() %>% 
+      select(name, state_name)
+    tmp1 <- st_intersection(nldi, conus) %>% 
+      st_drop_geometry() %>% 
+      slice(n =1)
+    df = water_use_data(tmp1$state_name, tmp1$name)
+    hchart(df, type = "column", hcaes(x = year, y = withdrawals, group = "sector")) %>%
+      hc_colors(c("red", "green", "grey", "blue", "orange"))
+  })
+
+
+output$waterUseGraph <- renderHighchart({
+        countyData()
+      })
+
+precipData <- eventReactive(input$dateButton, {
+  
+    nldi <- findNLDI(comid = comid) %>% 
+      st_centroid()
+    terra <- climateR::getTerraClim(AOI = nldi, param = c("prcp", "aet"),
+                       startDate = "1993-01-01",
+                       endDate = "2015-01-01")
+    highchart() %>%
+      hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
+                            min=0,
+                            max = max(terra$prcp),
+                            showFirstLabel = TRUE,
+                            showLastLabel = TRUE,
+                            opposite = FALSE),
+                         list(title = list(text = "Actual Evapotranspiration (mm)"),
+                            showLastLabel=FALSE,
+                            opposite = TRUE)) %>%
+      hc_add_series(terra, type = "column",
+                    hcaes(x = date, y = prcp), yAxis = 1 ) %>%
+      hc_add_series(terra, type = "line",
+                    hcaes(x = date, y = aet), yAxis = 0) %>%
+      hc_colors(c("darkcyan", "darkred"))
+
+    })
+
+output$precipGraph <- renderHighchart({
+        precipData()
+      })
+
+tempData <- eventReactive(input$dateButton, {
+  
+    nldi <- findNLDI(comid = comid) %>% 
+      st_centroid()
+    temp <- climateR::getTerraClim(AOI = nldi, param = c("tmax", "tmin"),
+                       startDate = "1993-01-01",
+                       endDate = "2014-12-31")
+
+    temp <- temp %>%
+      mutate(date = parse_date_time(temp$date, "ym")) %>%
+      mutate(month = month(date), year = year(date)) %>%
+      group_by(month) %>%
+      mutate(meanMax = mean(tmax), meanMin = mean(tmin))
+    
+    highchart() %>%
+      hc_add_series(temp, type = "column", hcaes(x = month, y = meanMax)) %>%
+      hc_add_series(temp, type = "column", hcaes(x = month, y = meanMin)) %>%
+      hc_colors(c("darkcyan", "darkred"))
+
+
+    })
+
+output$tempGraph <- renderHighchart({
+        tempData()
+      })
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

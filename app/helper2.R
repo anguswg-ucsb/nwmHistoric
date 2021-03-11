@@ -108,7 +108,7 @@ make_table3 <- function(comid) {
     mutate(str_length = lengthkm[2], max_elev = maxelevsmo[2], min_elev = minelevsmo[2], slope2 = slope[2]) %>% 
     slice(n = 1) %>% 
     select(1:6, 11:14)
-  conus <- USAboundaries::us_counties() %>% 
+  conus <- us_counties() %>% 
     select(name, state_name)
   tmp1 <- st_intersection(catch_df, conus) %>% 
     st_drop_geometry()
@@ -136,14 +136,10 @@ make_table3 <- function(comid) {
     rename(maxflow = flow_cms) %>% 
     select(date_max = dateTime, maxflow)
   max_flow$maxflow <- round(max_flow$maxflow, 2)
-  
   max_flow$date_max <- as.Date(max_flow$date_max)
-  
   max_flow <- max_flow %>% 
-    rename("Date max flow" = date_max)
-  max_flow <- max_flow %>% 
-    rename("Max flow rate" = maxflow)
- 
+    rename("Date max flow" = date_max,
+           "Max flow rate" = maxflow)
   max_flow <- max_flow %>% 
     mutate(across(1:2, as.character)) %>%
     tidyr::pivot_longer(1:2, names_to = "tag", values_to = "vals") 
@@ -154,53 +150,46 @@ make_table3 <- function(comid) {
     rename(minflow = flow_cms) %>% 
     select(date_min = dateTime, minflow)
   min_flow$minflow <- round(min_flow$minflow, 2)
-  
   min_flow$date_min <- as.Date(min_flow$date_min)
-  # min_flow <- nwm %>% 
-  #   mutate(min_date = as.Date(dateTime)) %>% 
-  #   group_by(min_date) %>% 
-  #   summarize(min_flow = sum(flow_cms)) %>% 
-  #   arrange(minflow) %>% 
-  #   slice(n =1)
-  
-  min_flow$minflow <- round(min_flow$minflow, 2)
-  
-  min_flow <- rename(min_flow, "Min flow rate" = minflow, "Date min flow" = date_min,)
-  
+  min_flow <- rename(min_flow, "Min flow rate" = minflow,
+                     "Date min flow" = date_min,)
   min_flow <- min_flow %>% 
     mutate(across(1:2, as.character)) %>%
     tidyr::pivot_longer(1:2, names_to = "tag", values_to = "vals") 
   
-  
   tmp2 <- bind_rows(tmp2, max_flow)
   tmp2 <- bind_rows(tmp2, min_flow)
   
+  DT::datatable(tmp2, colnames = c(" " = "tag", " " = "vals"), options = list(dom = "t"), rownames = FALSE) 
 #   gt::gt(tmp2, rowname_col = "tag") %>%
 #     tab_stubhead(label = "") %>%
-#     # tab_spanner(label = "COMID", columns = vars(tag, vals)) %>% 
+#     # tab_spanner(label = "COMID", columns = vars(tag, vals)) %>%
 #     tab_header(
 #       title = "Summary"
 #     )  %>%
-#     cols_align("right") %>% 
+#     cols_align("right") %>%
 #     cols_label(
 #       vals = " "
-#     ) 
-knitr::kable(tmp2, col.names = c('', " "), booktabs= T,
-             table.attr ='class="table" style="color: black"', escape = F, align = "c") %>%
-  kableExtra::kable_classic("striped") %>%
-  # kableExtra::kable_material(c("striped", "hover")) %>%
-  kableExtra::kable_styling(position = "center") %>%
-  kableExtra::column_spec(1, background = "#BCD4E6") %>%
-  kableExtra::column_spec(2, background = "azure")
-}
-  # formattable(tmp2, align = c("l", rep("r", NCOL(tmp2) - 1)),
-  #                          list(`tag` = formatter("span", style = ~ style(font.weight = "bold")),
-  #                               # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
+#     )
+# knitr::kable(tmp2, col.names = c('', " "), booktabs= T,
+#              table.attr ='class="table" style="color: black"', escape = F, align = "c") %>%
+#   kableExtra::kable_classic("striped") %>%
+#   # kableExtra::kable_material(c("striped", "hover")) %>%
+#   kableExtra::kable_styling(position = "center") %>%
+#   kableExtra::column_spec(1, background = "#BCD4E6") %>%
+#   kableExtra::column_spec(2, background = "azure")
 
-  #                               # `vals` = color_bar("honeydew")),
-  #                               `vals` = formatter("span", style = ~ style(font.weight = "bold"))))
-                                # `Flow rate (C/m/s)` = color_tile("azure1", "cadetblue4"))),
-               # options = list(paging = TRUE, searching = TRUE))
+
+}
+
+
+#   formattable(tmp2, align = c("l", rep("r", NCOL(tmp2) - 1)),
+#                            list(`tag` = formatter("span", style = ~ style(font.weight = "bold")),
+#                                 # `comid` = formatter("span", style = ~ style(border = "black", background = "gold", font.weight = "bold")),
+#                                 # `vals` = color_bar("honeydew")),
+#                                 `vals` = formatter("span", style = ~ style(font.weight = "bold")),
+#   `Flow rate (C/m/s)` = color_tile("azure1", "cadetblue4"),
+#   options = list(paging = TRUE, searching = TRUE)))
  
    # formattable(tmp2, align = c("l", rep("r", NCOL(tmp2) - 1)),
    #            list(`tag` = formatter("span", style = ~ style(font.weight = "bold")),
@@ -245,20 +234,22 @@ water_use_data <- function(state, county) {
   }
 
   water_use <- water_use %>%
-    mutate("Public supply" = public + domestic,
+    mutate(Public = public + domestic,
            Thermoelectric = total,
            Irrigation = livestock1 + livestock2 + aquacultere1 + irrigation1 + irrigation2) %>%
-    select(1:6, "Public supply", Irrigation, Industrial = industrial, Mining = mining,  Thermoelectric)
+    select(1:6, Public, Irrigation, Industrial = industrial, Mining = mining,  Thermoelectric)
   water_use <- water_use %>%
     tidyr::unite('fips', statefips, countyfips)
   water_use$fips <- gsub("_", "", water_use$fips)
   water_use$fips <- as.numeric(water_use$fips)
-  water_use <- water_use %>%
-    tidyr::pivot_longer(6:10, names_to = "sector", values_to = "withdrawals")
-  water_use <- group_by(water_use, sector, year)
+  # water_use <- water_use %>%
+  #   tidyr::pivot_longer(6:10, names_to = "Sector", values_to = "WITHDRAWALS")
+  
+  water_use <- rename(water_use, YEAR = year)
+  return(water_use)
+  # water_use <- group_by(water_use, Sector, YEAR)
 }
-
-
+# water_use_data("CA", "Santa Barbara")
 
 make_ts2 <- function(comid) {
   nwm <- readNWMdata(comid = comid)

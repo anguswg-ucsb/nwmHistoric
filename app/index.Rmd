@@ -19,7 +19,8 @@ library(dataRetrieval)
 library(nhdplusTools)
 library(nwmHistoric)
 library(climateR)
-
+library(USAboundaries)
+library(USAboundariesData)
 library(lubridate)
 
 library(leaflet)
@@ -27,8 +28,9 @@ library(sf)
 library(ggplot2)
 library(dplyr)
 library(dygraphs)
-library(highcharter)
+library(DT)
 library(plotly)
+library(highcharter)
 # library(gt)
 
 
@@ -76,7 +78,7 @@ dateRangeInput("dateTS", label = "Date Range Input",
                max = "2018-12-31",
                format = "yyyy mm dd",
                weekstart = 1)
-htmlOutput("summaryTable")
+DTOutput("summaryTable")
 ```
 
 ### **Submit**
@@ -91,7 +93,7 @@ Row
 valueBoxOutput("comidBox")
 ```
 
-Row {data-height=650}
+Row {data-height=700}
 -----------------------------------------------------------------------
 
 ###
@@ -133,8 +135,7 @@ leafletOutput("catchMap2")
       filter(featureid == comid)
     
     output$comidBox <- renderValueBox({
-    valueBox(value = paste("COMID: ", comid),
-      icon = "fa-water") })
+    valueBox(value = paste("COMID: ", comid)) })
     
     bounds <- st_bbox(pt) %>% 
       st_as_sfc() %>% 
@@ -212,8 +213,7 @@ observeEvent(input$catchMap2_click, {
       filter(featureid == comid)
     
     output$comidBox <- renderValueBox({
-    valueBox(value = paste("COMID: ", comid),
-      icon = "fa-water") })
+    valueBox(value = paste("COMID: ", comid)) })
     
     bounds <- st_bbox(pt) %>% 
       st_as_sfc() %>% 
@@ -304,11 +304,6 @@ plotlyOutput("tempGraph")
 plotlyOutput("catchAggGraph")
 ```
 
-### Water use
-```{r}
-highchartOutput("waterUseGraph")
-```
-
 ```{r context = "server"}
 
 # check if change is triggered by user or by reactivity, dygraph won't update date range input is changed because range selector is used to change dygraph
@@ -372,12 +367,15 @@ catchTSplot <- eventReactive(input$dateButton, {
     nwm <- readNWMdata(comid = comid)
     ts = xts::xts(as.data.frame(nwm$flow_cms), order.by =nwm$dateTime, tz= 'UTC')
     dygraph(ts)  %>%
-          dyHighlight(highlightCircleSize = 2,
-                highlightSeriesBackgroundAlpha = .3) %>%
+          dyHighlight(highlightCircleSize = 3.5,
+                highlightSeriesBackgroundAlpha = .4) %>%
           dyOptions(colors = c("darkcyan"),
               fillGraph = TRUE) %>%
           dyRangeSelector(dateWindow = c(as.character(r$dateTS[1] + 1),
                                          as.character(r$dateTS[2] + 1)))
+        #   dyLimit(as.numeric(season[1, 4]), color = "red") %>% 
+    #   dyLimit(as.numeric(season[2, 4]), color = "red") %>% 
+    # dyLimit(as.numeric(season[3, 4]), color = "red")
 
   })
 
@@ -385,76 +383,98 @@ catchTSplot <- eventReactive(input$dateButton, {
 output$catchTS <- renderDygraph({
         catchTSplot()
       })
+```
 
+```{r context = "server"}
 # year-month aggregated flow data/plot, reactive to input of date button
 aggPlot <- eventReactive(input$dateButton, {
         nwm <-  readNWMdata(comid = comid)
         agg <- nwmHistoric::aggregate_ym(nwm)
-        
+
         plot_ly(agg, x = ~ym, y = ~flow_cms, type = 'bar',  
                 textposition = 'auto',
                 marker = list(color = 'rgb(158,202,225)',
                            line = list(color = 'rgb(8,48,107)', width = 1.5))) %>% 
-                           # layout(xaxis = list(title = "", tickangle = -45),
-          #         yaxis = list(title = ""),
-          #         margin = list(b = 100),
-          #         barmode = 'group')
                layout(title = 'Monthly flow totals',
-                 xaxis = list(
-                   title = "",
-                   tickfont = list(
-                     size = 14,
-                     color = 'rgb(107, 107, 107)')),
-                 yaxis = list(
-                   title = 'Discharge (cms)',
-                   titlefont = list(
-                     size = 16,
-                     color = 'rgb(107, 107, 107)'),
-                   tickfont = list(
-                     size = 14,
-                     color = 'rgb(107, 107, 107)')))
-})
-        
-        # gg <- ggplot(agg, aes(x = ym, y = flow_cms)) +
-        #   geom_col()
-        # plotly::ggplotly(gg)
-        
-      # hchart(agg, type = "column", hcaes(x = ym, y = flow_cms)) %>%
+                 xaxis = list(title = "",tickfont = list(size = 14, 
+                        color = 'rgb(107, 107, 107)')),
+                 yaxis = list(title = 'Discharge (cms)',
+                   titlefont = list(size = 16,color = 'rgb(107, 107, 107)'),
+                   tickfont = list(size = 14,color = 'rgb(107, 107, 107)'))) %>% 
+          config(displayModeBar = FALSE)
+          # hchart(agg, type = "column", hcaes(x = ym, y = flow_cms)) %>%
       #   hc_colors(c("red", "green", "blue", "grey", "orange")) %>% 
       #   hc_size(height = 450)
-    
+})
 
 # Render monthly flow totals plot after action button is clicked 
 output$catchAggGraph <- renderPlotly({
           aggPlot()
         })
 
+
 # county water use data/plot, reactive to input of date button
-countyData <- eventReactive(input$dateButton, {
+# countyData <- eventReactive(input$dateButton, {
+# 
+#     nldi <- findNLDI(comid = comid) %>% 
+#       st_centroid()
+#     conus <- USAboundaries::us_counties() %>% 
+#       select(name, state_name)
+#     tmp1 <- st_intersection(nldi, conus) %>% 
+#       st_drop_geometry() %>% 
+#       slice(n =1)
+#     df = water_use_data(tmp1$state_name, tmp1$name)
+#     
+#     plot_ly(df, x = ~year, y = ~df$Public, type = 'bar',
+#                 textposition = 'auto',
+#                 marker = list(color = 'blue', width = 1.5)) %>%
+#           add_trace(df, x = ~year,
+#                     y = ~Irrigation,
+#                     type = 'bar',
+#                     name = "Irrigation",
+#                     marker = list(color = 'green',
+#                                 width = 2)) %>%
+#           add_trace(df, x = ~year,
+#                     y = ~Industrial,
+#                     type = 'bar',
+#                     name = "Industrial",
+#                     marker = list(color = 'rgba(219, 64, 82, 0.7)',
+#                               line = list(color = 'rgba(219, 64, 82, 1.0)'))) %>%
+#           add_trace(df, x = ~year,
+#                     y = ~Thermoelectric,
+#                     type = 'bar',
+#                     name = "Thermoelectric",
+#                     marker = list(color = 'orange',
+#                                 width = 2)) %>%
+#           add_trace(df, x = ~year,
+#                     y = ~Mining,
+#                     type = 'bar',
+#                     name = "Mining",
+#                     marker = list(color = 'grey',
+#                                 width = 2)) %>%
+#             layout(title = 'Sector water use',
+#                  xaxis = list(title = "",
+#                    tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
+#                  yaxis = list(title = 'Degrees (Celsius) ',
+#                    titlefont = list(size = 16, color = 'rgb(107, 107, 107)'),
+#                    tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
+#                  legend = list(x = 0, y = 1, bgcolor = 'rgba(255, 255, 255, 0)', bordercolor = 'rgba(255, 255, 255, 0)'),
+#                  barmode = 'group',
+#                  bargap = 0.2,
+#                  bargroupgap = 0.15) %>%
+#             config(displayModeBar = FALSE)
+#     # hchart(df, type = "column", hcaes(x = YEAR, y = WITHDRAWALS, group = "Sector")) %>%
+#     #   hc_colors(c("red", "green", "grey", "blue", "orange")) %>%
+#     #   hc_size(height = 450)
+#   })
+# 
+# # Render water use plot after action button is clicked 
+# output$waterUseGraph <- renderPlotly({
+#         countyData()
+#       })
+```
 
-    nldi <- findNLDI(comid = 101) %>% 
-      st_centroid()
-    conus <- USAboundaries::us_counties() %>% 
-      select(name, state_name)
-    tmp1 <- st_intersection(nldi, conus) %>% 
-      st_drop_geometry() %>% 
-      slice(n =1)
-    df = water_use_data(tmp1$state_name, tmp1$name)
-    
-    plot_ly(df, x = ~ym, y = ~flow_cms, type = 'bar',  
-                textposition = 'auto',
-                marker = list(color = 'rgb(158,202,225)',
-                           line = list(color = 'rgb(8,48,107)', width = 1.5)))
-    # hchart(df, type = "column", hcaes(x = year, y = withdrawals, group = "sector")) %>%
-    #   hc_colors(c("red", "green", "grey", "blue", "orange")) %>% 
-    #   hc_size(height = 450)
-  })
-
-# Render water use plot after action button is clicked 
-output$waterUseGraph <- renderHighchart({
-        countyData()
-      })
-
+```{r context = "server"}
 # precip & evapotran data/plot, reactive to input of date button
 precipData <- eventReactive(input$dateButton, {
   
@@ -467,42 +487,33 @@ precipData <- eventReactive(input$dateButton, {
     precip$date <- paste0(precip$date, "-01")
     precip$date <- as.Date(precip$date)
     rownames(precip) <- precip$date
-    precip <- select(precip, prcp)
+    precip <- select(precip, PPT = prcp)
 
     dygraph(data = precip,
-            main = "Precipitation",
-            ylab = "Precipitation (mm)",
-            xlab = "Date") %>% 
-      dyHighlight(highlightCircleSize = 2,
-                highlightSeriesBackgroundAlpha = .3) %>%
-          dyOptions(colors = c("darkcyan"),
+            main = "PRECIPITATION",
+            ylab = "PRECIPITATION (mm)",
+            xlab = "DATE") %>% 
+      dyHighlight(highlightCircleSize = 4,
+                highlightSeriesBackgroundAlpha = .4) %>%
+          dyOptions(colors = c("navy"),
               fillGraph = TRUE) 
-    # terra <- climateR::getTerraClim(AOI = nldi, param = c("prcp", "aet"),
-    #                    startDate = "1993-01-01",
-    #                    endDate = "2015-01-01")
     # highchart() %>%
-    #   hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
-    #                         min=0,
-    #                         max = max(terra$prcp),
-    #                         showFirstLabel = TRUE,
-    #                         showLastLabel = TRUE,
-    #                         opposite = FALSE),
-    #                      list(title = list(text = "Actual Evapotranspiration (mm)"),
-    #                         showLastLabel=FALSE,
-    #                         opposite = TRUE)) %>%
-    #   hc_add_series(terra, type = "column",
-    #                 hcaes(x = date, y = prcp), yAxis = 1 ) %>%
-    #   hc_add_series(terra, type = "line",
-    #                 hcaes(x = date, y = aet), yAxis = 0) %>%
+    #   hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),min=0, max = max(terra$prcp),
+    #             showFirstLabel = TRUE, showLastLabel = TRUE, opposite = FALSE),
+    #             list(title = list(text = "Actual Evapotranspiration (mm)"), showLastLabel=FALSE,opposite = TRUE)) %>%
+    #   hc_add_series(terra, type = "column", hcaes(x = date, y = prcp), yAxis = 1 ) %>%
+    #   hc_add_series(terra, type = "line", hcaes(x = date, y = aet), yAxis = 0) %>%
     #   hc_colors(c("darkcyan", "darkred")) %>% 
     #   hc_size(height = 450)
-
     })
 
 # Render precip/evapo plot after action button is clicked 
 output$precipGraph <- renderDygraph({
         precipData()
       })
+```
+
+```{r context = "server"}
 # precip & evapotran data/plot, reactive to input of date button
 evapData <- eventReactive(input$dateButton, {
   
@@ -514,14 +525,15 @@ evapData <- eventReactive(input$dateButton, {
 
     evap$date <- paste0(evap$date, "-01")
     evap$date <- as.Date(evap$date)
+    evap <- evap %>% rename(AET = aet)
     rownames(evap) <- evap$date
     
-    dygraph(data = select(evap,aet),
-            main = "Actual Evapotranspiration",
-            ylab = "Evapotranspiation (mm)",
-            xlab = "Date") %>% 
-      dyHighlight(highlightCircleSize = 2,
-                highlightSeriesBackgroundAlpha = .3) %>%
+    dygraph(data = select(evap,AET),
+            main = "ACTUAL EVAPOTRANSPIRATION",
+            ylab = "EVAPOTRANSPIRATION (mm)",
+            xlab = "DATE") %>% 
+      dyHighlight(highlightCircleSize = 4,
+                highlightSeriesBackgroundAlpha = .4) %>%
           dyOptions(colors = c("darkred"),
               fillGraph = TRUE)
     
@@ -541,13 +553,15 @@ evapData <- eventReactive(input$dateButton, {
     #                 hcaes(x = date, y = aet), yAxis = 0) %>%
     #   hc_colors(c("darkcyan", "darkred")) %>% 
     #   hc_size(height = 450)
-
     })
 
 # Render precip/evapo plot after action button is clicked 
 output$evapGraph <- renderDygraph({
         evapData()
       })
+```
+
+```{r context = "server"}
 # monthly mean Min and Max temps data/plot, reactive to input of date button
 tempData <- eventReactive(input$dateButton, {
   
@@ -573,69 +587,54 @@ tempData <- eventReactive(input$dateButton, {
       slice(n = 12) %>% 
       ungroup() %>% 
       arrange(date)
-    temp$month
     temp$month <- factor(temp$month, levels = c("January", "February", "March", 
                                                   "April", "May", "June","July", "August", 
                                                   "September", "October","November", "December" ))
-    # ggplot(data = temp2, aes(x =month, y = temperature, fill = min_max)) +
-    #   geom_col()
-      # geom_col(position = position_dodge(3), width = 2.5,  fill = "red")
     
     plot_ly(temp, x = ~month, y = ~meanMax, type = 'bar',  
                   textposition = 'auto',
-                  name = "Max temperature",
+                  name = "Max",
                   marker = list(color = 'rgba(219, 64, 82, 0.7)',
                               line = list(color = 'rgba(219, 64, 82, 1.0)',
                               width = 2))) %>% 
             add_trace(temp, x = ~month,
                     y = ~meanMin,
                     type = 'bar',
-                    name = "Min temperature",
+                    name = "Min",
                     marker = list(color = 'rgba(55, 128, 191, 0.7)',
                                 line = list(color = 'rgba(55, 128, 191, 0.7)',
                                 width = 2))) %>% 
-          # layout(xaxis = list(title = "", tickangle = -45),
-          #         yaxis = list(title = ""),
-          #         margin = list(b = 100),
-          #         barmode = 'group')
             layout(title = 'Monthly mean temperature',
-                 xaxis = list(
-                   title = "",
-                   tickfont = list(
-                     size = 14,
-                     color = 'rgb(107, 107, 107)')),
-                 yaxis = list(
-                   title = 'Degrees (Celsius) ',
-                   titlefont = list(
-                     size = 16,
-                     color = 'rgb(107, 107, 107)'),
-                   tickfont = list(
-                     size = 14,
-                     color = 'rgb(107, 107, 107)')),
+                 xaxis = list(title = "",
+                   tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
+                 yaxis = list(title = 'Degrees (Celsius) ',
+                   titlefont = list(size = 16, color = 'rgb(107, 107, 107)'),
+                   tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
                  legend = list(x = 0, y = 1, bgcolor = 'rgba(255, 255, 255, 0)', bordercolor = 'rgba(255, 255, 255, 0)'),
                  barmode = 'group',
                  bargap = 0.2, 
-                 bargroupgap = 0.15)
-
-
+                 bargroupgap = 0.15) %>% 
+            config(displayModeBar = FALSE)
+    
     # highchart() %>%
     #   hc_add_series(temp, type = "column", hcaes(x = month, y = meanMax)) %>%
     #   hc_add_series(temp, type = "column", hcaes(x = month, y = meanMin)) %>%
     #   hc_colors(c("darkcyan", "darkred")) %>% 
     #   hc_size(height = 450)
-
-
     })
+
 # Render mean temp plot after action button is clicked 
 output$tempGraph <- renderPlotly({
         tempData()
       })
+```
 
+```{r context = "server"}
 summaryData <- eventReactive(input$dateButton, {
   make_table3(comid)
 })
 
-output$summaryTable <- renderText({ 
+output$summaryTable <- renderDT({ 
       summaryData()
   })
     

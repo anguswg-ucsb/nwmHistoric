@@ -73,6 +73,70 @@ verbatimTextOutput("dateTSText2")
 htmlOutput("areaTable")
 ```
 
+
+```{r context = "server"}
+# county water use data/plot, reactive to input of date button
+countyData <- eventReactive(input$dateButton, {
+
+    nldi <- findNLDI(comid = comid) %>% 
+      st_centroid()
+    conus <- USAboundaries::us_counties() %>% 
+      select(name, state_name)
+    tmp1 <- st_intersection(nldi, conus) %>% 
+      st_drop_geometry() %>% 
+      slice(n =1)
+    df = water_use_data(tmp1$state_name, tmp1$name)
+    
+    plot_ly(df, x = ~year, y = ~df$Public, type = 'bar',
+                textposition = 'auto',
+                marker = list(color = 'blue', width = 1.5)) %>%
+          add_trace(df, x = ~year,
+                    y = ~Irrigation,
+                    type = 'bar',
+                    name = "Irrigation",
+                    marker = list(color = 'green',
+                                width = 2)) %>%
+          add_trace(df, x = ~year,
+                    y = ~Industrial,
+                    type = 'bar',
+                    name = "Industrial",
+                    marker = list(color = 'rgba(219, 64, 82, 0.7)',
+                              line = list(color = 'rgba(219, 64, 82, 1.0)'))) %>%
+          add_trace(df, x = ~year,
+                    y = ~Thermoelectric,
+                    type = 'bar',
+                    name = "Thermoelectric",
+                    marker = list(color = 'orange',
+                                width = 2)) %>%
+          add_trace(df, x = ~year,
+                    y = ~Mining,
+                    type = 'bar',
+                    name = "Mining",
+                    marker = list(color = 'grey',
+                                width = 2)) %>%
+            layout(title = 'Sector water use',
+                 xaxis = list(title = "",
+                   tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
+                 yaxis = list(title = 'Degrees (Celsius) ',
+                   titlefont = list(size = 16, color = 'rgb(107, 107, 107)'),
+                   tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
+                 legend = list(x = 0, y = 1, bgcolor = 'rgba(255, 255, 255, 0)', bordercolor = 'rgba(255, 255, 255, 0)'),
+                 barmode = 'group',
+                 bargap = 0.2,
+                 bargroupgap = 0.15) %>%
+            config(displayModeBar = FALSE)
+    # hchart(df, type = "column", hcaes(x = YEAR, y = WITHDRAWALS, group = "Sector")) %>%
+    #   hc_colors(c("red", "green", "grey", "blue", "orange")) %>%
+    #   hc_size(height = 450)
+  })
+
+# Render water use plot after action button is clicked 
+output$waterUseGraph <- renderPlotly({
+        countyData()
+      })
+```
+
+
 ### **Submit**
 ```{r}
 shiny::actionButton("dateButton", label = "Enter", icon("search"))
