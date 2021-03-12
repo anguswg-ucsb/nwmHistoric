@@ -242,11 +242,10 @@ water_use_data <- function(state, county) {
     tidyr::unite('fips', statefips, countyfips)
   water_use$fips <- gsub("_", "", water_use$fips)
   water_use$fips <- as.numeric(water_use$fips)
-  # water_use <- water_use %>%
-  #   tidyr::pivot_longer(6:10, names_to = "Sector", values_to = "WITHDRAWALS")
-  
-  water_use <- rename(water_use, YEAR = year)
-  return(water_use)
+  water_use <- water_use %>%
+    tidyr::pivot_longer(6:10, names_to = "sector", values_to = "withdrawals")
+  # 
+  # water_use <- rename(water_use, YEAR = year)
   # water_use <- group_by(water_use, Sector, YEAR)
 }
 # water_use_data("CA", "Santa Barbara")

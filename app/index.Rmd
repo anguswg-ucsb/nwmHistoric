@@ -173,6 +173,16 @@ leafletOutput("catchMap2")
       flyToBounds(bounds[1], bounds[2], bounds[3], bounds[4])
       # addPolygons( data = catch_df2,
       #              col = 'red')
+    # 
+    # output$summaryTable <- renderDT({
+    #     make_table3(comid)
+    #   })
+
+     # summaryData <- eventReactive(input$dateButton, {
+        #   make_table3(comid)
+        # })
+        # output$summaryTable <- renderDT({
+        #       summaryData()
    } 
 })
 
@@ -304,6 +314,11 @@ plotlyOutput("tempGraph")
 plotlyOutput("catchAggGraph")
 ```
 
+### Water use 
+```{r}
+plotlyOutput("waterUseGraph")
+```
+
 ```{r context = "server"}
 
 # check if change is triggered by user or by reactivity, dygraph won't update date range input is changed because range selector is used to change dygraph
@@ -414,64 +429,73 @@ output$catchAggGraph <- renderPlotly({
 
 
 # county water use data/plot, reactive to input of date button
-# countyData <- eventReactive(input$dateButton, {
-# 
-#     nldi <- findNLDI(comid = comid) %>% 
-#       st_centroid()
-#     conus <- USAboundaries::us_counties() %>% 
-#       select(name, state_name)
-#     tmp1 <- st_intersection(nldi, conus) %>% 
-#       st_drop_geometry() %>% 
-#       slice(n =1)
-#     df = water_use_data(tmp1$state_name, tmp1$name)
-#     
-#     plot_ly(df, x = ~year, y = ~df$Public, type = 'bar',
-#                 textposition = 'auto',
-#                 marker = list(color = 'blue', width = 1.5)) %>%
-#           add_trace(df, x = ~year,
-#                     y = ~Irrigation,
-#                     type = 'bar',
-#                     name = "Irrigation",
-#                     marker = list(color = 'green',
-#                                 width = 2)) %>%
-#           add_trace(df, x = ~year,
-#                     y = ~Industrial,
-#                     type = 'bar',
-#                     name = "Industrial",
-#                     marker = list(color = 'rgba(219, 64, 82, 0.7)',
-#                               line = list(color = 'rgba(219, 64, 82, 1.0)'))) %>%
-#           add_trace(df, x = ~year,
-#                     y = ~Thermoelectric,
-#                     type = 'bar',
-#                     name = "Thermoelectric",
-#                     marker = list(color = 'orange',
-#                                 width = 2)) %>%
-#           add_trace(df, x = ~year,
-#                     y = ~Mining,
-#                     type = 'bar',
-#                     name = "Mining",
-#                     marker = list(color = 'grey',
-#                                 width = 2)) %>%
-#             layout(title = 'Sector water use',
-#                  xaxis = list(title = "",
-#                    tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
-#                  yaxis = list(title = 'Degrees (Celsius) ',
-#                    titlefont = list(size = 16, color = 'rgb(107, 107, 107)'),
-#                    tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
-#                  legend = list(x = 0, y = 1, bgcolor = 'rgba(255, 255, 255, 0)', bordercolor = 'rgba(255, 255, 255, 0)'),
-#                  barmode = 'group',
-#                  bargap = 0.2,
-#                  bargroupgap = 0.15) %>%
-#             config(displayModeBar = FALSE)
-#     # hchart(df, type = "column", hcaes(x = YEAR, y = WITHDRAWALS, group = "Sector")) %>%
-#     #   hc_colors(c("red", "green", "grey", "blue", "orange")) %>%
-#     #   hc_size(height = 450)
-#   })
-# 
-# # Render water use plot after action button is clicked 
-# output$waterUseGraph <- renderPlotly({
-#         countyData()
-#       })
+countyData <- eventReactive(input$dateButton, {
+
+    nldi <- findNLDI(comid = comid) %>%
+      st_centroid()
+    conus <- USAboundaries::us_counties() %>%
+      select(name, state_name)
+    tmp1 <- st_intersection(nldi, conus) %>%
+      st_drop_geometry() %>%
+      slice(n =1)
+    df = water_use_data(tmp1$state_name, tmp1$name)
+    
+gg = ggplot(df, aes(x = year, y = withdrawals)) +
+  geom_col(aes(fill = sector), position = position_dodge(4.1), width = 4) +
+scale_y_continuous(breaks = scales::pretty_breaks(n = 10),
+                     expand = c(0, 0),
+                     limits = c(0, NA)) +
+  theme_classic()
+
+ggplotly(gg)
+
+    # plot_ly(df, x = ~year, y = ~Public, type = 'bar') %>%
+    #             # textposition = 'auto',
+    #             # marker = list(color = 'blue', width = 1.5)) %>%
+    #       add_trace(df, x = ~year,
+    #                 y = ~Irrigation,
+    #                 type = 'bar',
+    #                 name = "Irrigation",
+    #                 marker = list(color = 'green',
+    #                             width = 2)) %>%
+    #       add_trace(df, x = ~year,
+    #                 y = ~Industrial,
+    #                 type = 'bar',
+    #                 name = "Industrial",
+    #                 marker = list(color = 'rgba(219, 64, 82, 0.7)',
+    #                           line = list(color = 'rgba(219, 64, 82, 1.0)'))) %>%
+    #       add_trace(df, x = ~year,
+    #                 y = ~Thermoelectric,
+    #                 type = 'bar',
+    #                 name = "Thermoelectric",
+    #                 marker = list(color = 'orange',
+    #                             width = 2)) %>%
+    #       add_trace(df, x = ~year,
+    #                 y = ~Mining,
+    #                 type = 'bar',
+    #                 name = "Mining",
+    #                 marker = list(color = 'grey',
+    #                             width = 2)) %>%
+    #         layout(title = 'Sector water use',
+    #              # xaxis = list(title = "",
+    #              #   tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
+    #              # yaxis = list(title = 'Degrees (Celsius) ',
+    #              #   titlefont = list(size = 16, color = 'rgb(107, 107, 107)'),
+    #              #   tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
+    #              # legend = list(x = 0, y = 1, bgcolor = 'rgba(255, 255, 255, 0)', bordercolor = 'rgba(255, 255, 255, 0)'),
+    #              barmode = 'group',
+    #              bargap = 0.2,
+    #              bargroupgap = 0.15) %>%
+    #         config(displayModeBar = FALSE)
+    # hchart(df, type = "column", hcaes(x = YEAR, y = WITHDRAWALS, group = "Sector")) %>%
+    #   hc_colors(c("red", "green", "grey", "blue", "orange")) %>%
+    #   hc_size(height = 450)
+  })
+
+# Render water use plot after action button is clicked
+output$waterUseGraph <- renderPlotly({
+        countyData()
+      })
 ```
 
 ```{r context = "server"}
@@ -496,7 +520,9 @@ precipData <- eventReactive(input$dateButton, {
       dyHighlight(highlightCircleSize = 4,
                 highlightSeriesBackgroundAlpha = .4) %>%
           dyOptions(colors = c("navy"),
-              fillGraph = TRUE) 
+              fillGraph = TRUE)
+      # dyRangeSelector(dateWindow = c(as.character(r$dateTS[1] + 1),
+      #                                    as.character(r$dateTS[2] + 1)))
     # highchart() %>%
     #   hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),min=0, max = max(terra$prcp),
     #             showFirstLabel = TRUE, showLastLabel = TRUE, opposite = FALSE),
@@ -536,6 +562,8 @@ evapData <- eventReactive(input$dateButton, {
                 highlightSeriesBackgroundAlpha = .4) %>%
           dyOptions(colors = c("darkred"),
               fillGraph = TRUE)
+      # dyRangeSelector(dateWindow = c(as.character(r$dateTS[1] + 1),
+      #                                    as.character(r$dateTS[2] + 1)))
     
     # highchart() %>%
     #   hc_yAxis_multiples(list(title = list(text = "Accumulated Precipitation (mm)"),
@@ -627,17 +655,15 @@ tempData <- eventReactive(input$dateButton, {
 output$tempGraph <- renderPlotly({
         tempData()
       })
-```
 
-```{r context = "server"}
 summaryData <- eventReactive(input$dateButton, {
-  make_table3(comid)
-})
-
-output$summaryTable <- renderDT({ 
-      summaryData()
-  })
+      make_table3(comid)
+    })
     
+output$summaryTable <- renderDT({
+          summaryData()
+      })
+
 ```
 
 
