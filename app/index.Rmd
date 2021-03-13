@@ -413,7 +413,7 @@ aggPlot <- eventReactive(input$dateButton, {
                layout(title = 'Monthly flow totals',
                  xaxis = list(title = "",tickfont = list(size = 14, 
                         color = 'rgb(107, 107, 107)')),
-                 yaxis = list(title = 'Discharge (cms)',
+                 yaxis = list(title = 'Flow rate (cubic m/s)',
                    titlefont = list(size = 16,color = 'rgb(107, 107, 107)'),
                    tickfont = list(size = 14,color = 'rgb(107, 107, 107)'))) %>% 
           config(displayModeBar = FALSE)
@@ -440,14 +440,18 @@ countyData <- eventReactive(input$dateButton, {
       slice(n =1)
     df = water_use_data(tmp1$state_name, tmp1$name)
     
-gg = ggplot(df, aes(x = year, y = withdrawals)) +
-  geom_col(aes(fill = sector), position = position_dodge(4.1), width = 4) +
-scale_y_continuous(breaks = scales::pretty_breaks(n = 10),
-                     expand = c(0, 0),
-                     limits = c(0, NA)) +
-  theme_classic()
+    gg = ggplot(df, aes(x = year, y = withdrawals)) +
+            geom_col(aes(fill = sector), position = position_dodge(4.1), width = 4) +
+            scale_y_continuous(breaks = scales::pretty_breaks(n = 10),
+                       expand = c(0, 0),
+                       limits = c(0, NA)) +
+            theme_classic() +
+            labs(x = '',
+                 y = "Withdrawals  (Mgal/day)",
+                 fill = "")
 
-ggplotly(gg)
+        ggplotly(gg) %>%
+            config(displayModeBar = FALSE)
 
     # plot_ly(df, x = ~year, y = ~Public, type = 'bar') %>%
     #             # textposition = 'auto',
@@ -515,8 +519,7 @@ precipData <- eventReactive(input$dateButton, {
 
     dygraph(data = precip,
             main = "PRECIPITATION",
-            ylab = "PRECIPITATION (mm)",
-            xlab = "DATE") %>% 
+            ylab = "Water volume (mm)") %>% 
       dyHighlight(highlightCircleSize = 4,
                 highlightSeriesBackgroundAlpha = .4) %>%
           dyOptions(colors = c("navy"),
@@ -556,8 +559,7 @@ evapData <- eventReactive(input$dateButton, {
     
     dygraph(data = select(evap,AET),
             main = "ACTUAL EVAPOTRANSPIRATION",
-            ylab = "EVAPOTRANSPIRATION (mm)",
-            xlab = "DATE") %>% 
+            ylab = "Water volume (mm)") %>% 
       dyHighlight(highlightCircleSize = 4,
                 highlightSeriesBackgroundAlpha = .4) %>%
           dyOptions(colors = c("darkred"),
@@ -635,7 +637,7 @@ tempData <- eventReactive(input$dateButton, {
             layout(title = 'Monthly mean temperature',
                  xaxis = list(title = "",
                    tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
-                 yaxis = list(title = 'Degrees (Celsius) ',
+                 yaxis = list(title = 'Temperature (°C) ',
                    titlefont = list(size = 16, color = 'rgb(107, 107, 107)'),
                    tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
                  legend = list(x = 0, y = 1, bgcolor = 'rgba(255, 255, 255, 0)', bordercolor = 'rgba(255, 255, 255, 0)'),
