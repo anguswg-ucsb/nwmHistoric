@@ -30,6 +30,10 @@ library(dplyr)
 library(dygraphs)
 library(DT)
 library(plotly)
+library(miniUI)
+library(highcharter)
+# library(gt)
+
 
 source('helper2.R')
 ```
@@ -270,51 +274,38 @@ observeEvent(input$catchMap2_click, {
 })
 ```
 
-
 Row
 -----------------------------------------------------------------------
-
-### Flow data
+### Time series 
 ```{r}
 dygraphOutput("catchTS")
 ```
 
-Row {.tabset}
------------------------------------------------------------------------
-
-### Precipitation
-```{r}
-dygraphOutput ('precipGraph')
-```
-
-### Evapotranspiration
-```{r}
-dygraphOutput("evapGraph")
-```
-
 ### Temperature
 ```{r}
+
+shinydashboard::tabBox(width=12,
+      title = "First tabBox",
+      id = "tabset1",
+      tabPanel("TabA", dygraphOutput ('precipGraph')),
+      tabPanel("TabB", plotlyOutput("tempGraph"))
+    )
 # {.tabset data-width=400}
 # fillRow(flex = c(NA, 1),
-# tabsetPanel(type = "tabs",
-#             tabPanel("Precipitation", dygraphOutput ('precipGraph')),
-#             tabPanel("Evaporation", dygraphOutput("evapGraph")),
-#             tabPanel("Monthly flows", highchartOutput("catchAggGraph")),
-#             tabPanel("Temperature" , highchartOutput("tempGraph")),
-#             tabPanel("Water use", highchartOutput("waterUseGraph")))
+# miniTabstripPanel(
+#                   miniTabPanel("Visualize", icon = icon("area-chart"),
+#                     miniContentPanel(dygraphOutput ('precipGraph'), height="100%")),
+#                   miniTabPanel("Parameters", icon = icon("sliders"),    
+#                     miniContentPanel(dygraphOutput("evapGraph"), height="100%")),
+#                   miniTabPanel("Map", icon = icon("map-o"),
+#                     miniContentPanel(plotlyOutput("catchAggGraph"), height="100%")),
+#                   miniTabPanel("Data", icon = icon("table"),
+#                     miniContentPanel(plotlyOutput("tempGraph"), height="100%")),
+#                   miniTabPanel("Water", icon = icon("water"),
+#                     miniContentPanel(plotlyOutput("waterUseGraph"), height="100%")))
 
-plotlyOutput("tempGraph")
 ```
 
-### Discharge
-```{r}
-plotlyOutput("catchAggGraph")
-```
-
-### Water use 
-```{r}
-plotlyOutput("waterUseGraph")
-```
 
 ```{r context = "server"}
 
@@ -378,7 +369,7 @@ plotlyOutput("waterUseGraph")
 catchTSplot <- eventReactive(input$dateButton, {
     nwm <- readNWMdata(comid = comid)
     ts = xts::xts(as.data.frame(nwm$flow_cms), order.by =nwm$dateTime, tz= 'UTC')
-    dygraph(ts, ylab = "cubic m/s")  %>%
+    dygraph(ts)  %>%
           dyHighlight(highlightCircleSize = 3.5,
                 highlightSeriesBackgroundAlpha = .4) %>%
           dyOptions(colors = c("darkcyan"),
@@ -407,9 +398,10 @@ aggPlot <- eventReactive(input$dateButton, {
                 textposition = 'auto',
                 marker = list(color = 'rgb(158,202,225)',
                            line = list(color = 'rgb(8,48,107)', width = 1.5))) %>% 
-               layout(xaxis = list(title = "",tickfont = list(size = 14, 
+               layout(title = 'Monthly flow totals',
+                 xaxis = list(title = "",tickfont = list(size = 14, 
                         color = 'rgb(107, 107, 107)')),
-                 yaxis = list(title = 'cubic m/s',
+                 yaxis = list(title = 'Flow rate (cubic m/s)',
                    titlefont = list(size = 16,color = 'rgb(107, 107, 107)'),
                    tickfont = list(size = 14,color = 'rgb(107, 107, 107)'))) %>% 
           config(displayModeBar = FALSE)
@@ -443,7 +435,7 @@ countyData <- eventReactive(input$dateButton, {
                        limits = c(0, NA)) +
             theme_classic() +
             labs(x = '',
-                 y = "Mgal/day",
+                 y = "Withdrawals  (Mgal/day)",
                  fill = "")
 
         ggplotly(gg) %>%
@@ -514,6 +506,7 @@ precipData <- eventReactive(input$dateButton, {
     precip <- select(precip, PPT = prcp)
 
     dygraph(data = precip,
+            main = "PRECIPITATION",
             ylab = "Water volume (mm)") %>% 
       dyHighlight(highlightCircleSize = 4,
                 highlightSeriesBackgroundAlpha = .4) %>%
@@ -553,6 +546,7 @@ evapData <- eventReactive(input$dateButton, {
     rownames(evap) <- evap$date
     
     dygraph(data = select(evap,AET),
+            main = "ACTUAL EVAPOTRANSPIRATION",
             ylab = "Water volume (mm)") %>% 
       dyHighlight(highlightCircleSize = 4,
                 highlightSeriesBackgroundAlpha = .4) %>%
@@ -615,23 +609,23 @@ tempData <- eventReactive(input$dateButton, {
                                                   "April", "May", "June","July", "August", 
                                                   "September", "October","November", "December" ))
     
-    plot_ly(temp, x = ~month, y = ~meanMax, type = 'bar',  
+    plot_ly(temp, x = ~month, y = ~meanMax, type = 'bar',  width = 600, height = 400,
                   textposition = 'auto',
                   name = "Max",
                   marker = list(color = 'rgba(219, 64, 82, 0.7)',
                               line = list(color = 'rgba(219, 64, 82, 1.0)',
-                              width = 1))) %>% 
+                              width = 2))) %>% 
             add_trace(temp, x = ~month,
                     y = ~meanMin,
                     type = 'bar',
                     name = "Min",
                     marker = list(color = 'rgba(55, 128, 191, 0.7)',
                                 line = list(color = 'rgba(55, 128, 191, 0.7)',
-                                width = 1))) %>% 
-            layout(title = 'Monthly mean',
+                                width = 2))) %>% 
+            layout(title = 'Monthly mean temperature',
                  xaxis = list(title = "",
                    tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
-                 yaxis = list(title = '°C ',
+                 yaxis = list(title = 'Temperature (°C) ',
                    titlefont = list(size = 16, color = 'rgb(107, 107, 107)'),
                    tickfont = list(size = 14,color = 'rgb(107, 107, 107)')),
                  legend = list(x = 0, y = 1, bgcolor = 'rgba(255, 255, 255, 0)', bordercolor = 'rgba(255, 255, 255, 0)'),
@@ -661,30 +655,3 @@ output$summaryTable <- renderDT({
       })
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
